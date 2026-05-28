@@ -1,0 +1,2 @@
+rootProject.name = "FTPManager"
+include ':app'
