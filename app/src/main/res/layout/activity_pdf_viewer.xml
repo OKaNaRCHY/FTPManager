@@ -9,7 +9,8 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="#1565C0"
-        android:padding="4dp">
+        android:padding="4dp"
+        android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/tv_pdf_name"
@@ -17,10 +18,18 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:padding="8dp"
             android:singleLine="true"
             android:ellipsize="middle"/>
+
+        <TextView
+            android:id="@+id/tv_page"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:padding="8dp"/>
 
     </LinearLayout>
 
@@ -29,12 +38,45 @@
         android:layout_width="match_parent"
         android:layout_height="4dp"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-        android:visibility="visible"/>
+        android:visibility="gone"/>
 
-    <WebView
-        android:id="@+id/web_view"
+    <ScrollView
+        android:id="@+id/scroll_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1">
+
+        <ImageView
+            android:id="@+id/iv_pdf_page"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"/>
+
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#E3F2FD"
+        android:padding="4dp">
+
+        <Button
+            android:id="@+id/btn_prev"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="◀ Önceki"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btn_next"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Sonraki ▶"
+            android:layout_marginStart="4dp"/>
+
+    </LinearLayout>
 
 </LinearLayout>
