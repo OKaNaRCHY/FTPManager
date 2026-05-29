@@ -18,32 +18,6 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"/>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="#E3F2FD">
-
-        <Button
-            android:id="@+id/btn_ftp"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="FTP Bağlan"
-            android:layout_marginEnd="4dp"/>
-
-        <Button
-            android:id="@+id/btn_new_folder"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Yeni Klasör"
-            android:layout_marginStart="4dp"/>
-
-    </LinearLayout>
+        android:layout_height="match_parent"/>
 
 </LinearLayout>
