@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -161,25 +162,52 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void openFile(File f) {
+        String ext = f.getName().contains(".") ?
+                f.getName().substring(f.getName().lastIndexOf('.') + 1).toLowerCase() : "";
+
+        // Dahili text editör
+        if (ext.equals("txt") || ext.equals("log") || ext.equals("md") ||
+                ext.equals("java") || ext.equals("xml") || ext.equals("json") ||
+                ext.equals("html") || ext.equals("css") || ext.equals("js") ||
+                ext.equals("py") || ext.equals("gradle") || ext.equals("kt")) {
+            Intent i = new Intent(this, TextEditorActivity.class);
+            i.putExtra("file_path", f.getAbsolutePath());
+            startActivity(i);
+            return;
+        }
+
+        // Dahili PDF viewer
+        if (ext.equals("pdf")) {
+            Intent i = new Intent(this, PdfViewerActivity.class);
+            i.putExtra("file_path", f.getAbsolutePath());
+            startActivity(i);
+            return;
+        }
+
+        // Diğer dosyalar için sistem uygulaması
         try {
+            Uri uri = FileProvider.getUriForFile(this,
+                    getPackageName() + ".provider", f);
             Intent i = new Intent(Intent.ACTION_VIEW);
-            i.setDataAndType(Uri.fromFile(f), getMime(f.getName()));
-            i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            i.setDataAndType(uri, getMime(ext));
+            i.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(i);
         } catch (Exception e) {
-            Toast.makeText(this, "Açılamadı", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Bu dosyayı açacak uygulama bulunamadı", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private String getMime(String name) {
-        String e = name.contains(".") ? name.substring(name.lastIndexOf('.')+1).toLowerCase() : "";
-        switch (e) {
-            case "jpg": case "jpeg": case "png": return "image/*";
-            case "mp4": case "mkv": return "video/*";
-            case "mp3": return "audio/*";
+    private String getMime(String ext) {
+        switch (ext) {
+            case "jpg": case "jpeg": case "png": case "gif": case "webp": return "image/*";
+            case "mp4": case "mkv": case "avi": case "mov": return "video/*";
+            case "mp3": case "wav": case "flac": case "aac": return "audio/*";
             case "pdf": return "application/pdf";
             case "txt": return "text/plain";
             case "apk": return "application/vnd.android.package-archive";
+            case "zip": return "application/zip";
+            case "doc": case "docx": return "application/msword";
+            case "xls": case "xlsx": return "application/vnd.ms-excel";
             default: return "*/*";
         }
     }
@@ -187,8 +215,9 @@ public class MainActivity extends AppCompatActivity {
     private void showContextMenu(File f) {
         new AlertDialog.Builder(this)
                 .setTitle(f.getName())
-                .setItems(new String[]{"Sil", "Yeniden Adlandır"}, (d, w) -> {
-                    if (w == 0) deleteFile(f);
+                .setItems(new String[]{"Aç", "Sil", "Yeniden Adlandır"}, (d, w) -> {
+                    if (w == 0) openFile(f);
+                    else if (w == 1) deleteFile(f);
                     else renameFile(f);
                 }).show();
     }
