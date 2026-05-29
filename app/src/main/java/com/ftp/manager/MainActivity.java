@@ -3,19 +3,23 @@ package com.ftp.manager;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
-import android.view.View;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -25,7 +29,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -33,11 +36,24 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recycler;
     private FileAdapter adapter;
     private File currentDir;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        prefs = getSharedPreferences("FTPManagerPrefs", MODE_PRIVATE);
+        boolean isDark = prefs.getBoolean("dark_mode", false);
+        if (isDark) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        }
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("FTP Manager");
+        }
 
         tvPath = findViewById(R.id.tv_path);
         recycler = findViewById(R.id.recycler);
@@ -59,6 +75,34 @@ public class MainActivity extends AppCompatActivity {
         btnFolder.setOnClickListener(v -> createFolder());
 
         requestPermissions();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        } else if (id == R.id.action_dark_mode) {
+            boolean isDark = prefs.getBoolean("dark_mode", false);
+            prefs.edit().putBoolean("dark_mode", !isDark).apply();
+            if (!isDark) {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            } else {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+            }
+            return true;
+        } else if (id == R.id.action_ftp) {
+            startActivity(new Intent(this, FtpActivity.class));
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void requestPermissions() {
