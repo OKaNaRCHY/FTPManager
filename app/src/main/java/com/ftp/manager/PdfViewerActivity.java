@@ -1,34 +1,46 @@
 package com.ftp.manager;
 
-import android.content.Intent;
-import android.net.Uri;
+import android.graphics.Bitmap;
+import android.graphics.pdf.PdfRenderer;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.view.View;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.FileProvider;
 
 import java.io.File;
+import java.io.IOException;
 
 public class PdfViewerActivity extends AppCompatActivity {
+
+    private PdfRenderer pdfRenderer;
+    private PdfRenderer.Page currentPage;
+    private ParcelFileDescriptor fileDescriptor;
+    private ImageView ivPage;
+    private TextView tvPage, tvName;
+    private ProgressBar progress;
+    private Button btnPrev, btnNext;
+    private int currentPageIndex = 0;
+    private int totalPages = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pdf_viewer);
 
-        WebView webView = findViewById(R.id.web_view);
-        ProgressBar progress = findViewById(R.id.progress_pdf);
-        TextView tvName = findViewById(R.id.tv_pdf_name);
+        if (getSupportActionBar() != null) getSupportActionBar().hide();
 
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().hide();
-        }
+        ivPage = findViewById(R.id.iv_pdf_page);
+        tvPage = findViewById(R.id.tv_page);
+        tvName = findViewById(R.id.tv_pdf_name);
+        progress = findViewById(R.id.progress_pdf);
+        btnPrev = findViewById(R.id.btn_prev);
+        btnNext = findViewById(R.id.btn_next);
 
         String path = getIntent().getStringExtra("file_path");
         if (path == null) { finish(); return; }
@@ -36,48 +48,61 @@ public class PdfViewerActivity extends AppCompatActivity {
         File file = new File(path);
         tvName.setText(file.getName());
 
-        // Önce sistem PDF uygulamasıyla aç
         try {
-            Uri uri = FileProvider.getUriForFile(this,
-                    getPackageName() + ".provider", file);
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(uri, "application/pdf");
-            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(intent);
+            fileDescriptor = ParcelFileDescriptor.open(file,
+                    ParcelFileDescriptor.MODE_READ_ONLY);
+            pdfRenderer = new PdfRenderer(fileDescriptor);
+            totalPages = pdfRenderer.getPageCount();
+            showPage(0);
+        } catch (IOException e) {
+            Toast.makeText(this, "PDF açılamadı: " + e.getMessage(),
+                    Toast.LENGTH_LONG).show();
             finish();
             return;
-        } catch (Exception e) {
-            // Sistem uygulaması yoksa WebView ile dene
         }
 
-        // WebView ile aç
-        webView.getSettings().setJavaScriptEnabled(true);
-        webView.getSettings().setBuiltInZoomControls(true);
-        webView.getSettings().setDisplayZoomControls(false);
-        webView.getSettings().setSupportZoom(true);
-        webView.getSettings().setAllowFileAccess(true);
-        webView.getSettings().setAllowContentAccess(true);
-
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                progress.setVisibility(View.GONE);
-            }
-            @Override
-            public void onReceivedError(WebView view, int errorCode,
-                    String description, String failingUrl) {
-                Toast.makeText(PdfViewerActivity.this,
-                        "PDF açılamadı: " + description, Toast.LENGTH_LONG).show();
-            }
+        btnPrev.setOnClickListener(v -> {
+            if (currentPageIndex > 0) showPage(currentPageIndex - 1);
         });
 
+        btnNext.setOnClickListener(v -> {
+            if (currentPageIndex < totalPages - 1) showPage(currentPageIndex + 1);
+        });
+    }
+
+    private void showPage(int index) {
+        progress.setVisibility(View.VISIBLE);
+
+        if (currentPage != null) currentPage.close();
+
+        currentPage = pdfRenderer.openPage(index);
+        currentPageIndex = index;
+
+        int width = getResources().getDisplayMetrics().widthPixels;
+        int height = (int) (width * currentPage.getHeight() / (float) currentPage.getWidth());
+
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        bitmap.eraseColor(android.graphics.Color.WHITE);
+        currentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+
+        ivPage.setImageBitmap(bitmap);
+        tvPage.setText((index + 1) + " / " + totalPages);
+
+        btnPrev.setEnabled(index > 0);
+        btnNext.setEnabled(index < totalPages - 1);
+
+        progress.setVisibility(View.GONE);
+    }
+
+    @Override
+    protected void onDestroy() {
         try {
-            Uri uri = FileProvider.getUriForFile(this,
-                    getPackageName() + ".provider", file);
-            webView.loadUrl(uri.toString());
-        } catch (Exception e) {
-            Toast.makeText(this, "PDF açılamadı", Toast.LENGTH_SHORT).show();
-            finish();
+            if (currentPage != null) currentPage.close();
+            if (pdfRenderer != null) pdfRenderer.close();
+            if (fileDescriptor != null) fileDescriptor.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        super.onDestroy();
     }
 }
