@@ -68,6 +68,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (currentDir != null) loadDir(currentDir);
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                Environment.isExternalStorageManager()) {
+            loadDir(Environment.getExternalStorageDirectory());
+        }
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
@@ -81,6 +91,9 @@ public class MainActivity extends AppCompatActivity {
             return true;
         } else if (id == R.id.action_new_folder) {
             createFolder();
+            return true;
+        } else if (id == R.id.action_ftp_server) {
+            startActivity(new Intent(this, FtpServerActivity.class));
             return true;
         } else if (id == R.id.action_ftp) {
             startActivity(new Intent(this, FtpActivity.class));
@@ -96,46 +109,6 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void createNewFile() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(40, 20, 40, 20);
-
-        EditText etName = new EditText(this);
-        etName.setHint("Dosya adı (örn: notlar.txt)");
-
-        EditText etContent = new EditText(this);
-        etContent.setHint("İçerik (isteğe bağlı)");
-        etContent.setMinLines(3);
-
-        layout.addView(etName);
-        layout.addView(etContent);
-
-        new AlertDialog.Builder(this)
-                .setTitle("Yeni Dosya")
-                .setView(layout)
-                .setPositiveButton("Oluştur", (d, w) -> {
-                    String name = etName.getText().toString().trim();
-                    String content = etContent.getText().toString();
-                    if (name.isEmpty()) {
-                        Toast.makeText(this, "Dosya adı boş olamaz", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    File newFile = new File(currentDir, name);
-                    try {
-                        FileWriter fw = new FileWriter(newFile);
-                        fw.write(content);
-                        fw.close();
-                        loadDir(currentDir);
-                        Toast.makeText(this, "Dosya oluşturuldu!", Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("İptal", null)
-                .show();
     }
 
     private void requestPermissions() {
@@ -164,14 +137,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
-            if (currentDir == null) loadDir(Environment.getExternalStorageDirectory());
-        }
-    }
-
-    @Override
     public void onRequestPermissionsResult(int req, String[] perms, int[] results) {
         super.onRequestPermissionsResult(req, perms, results);
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
@@ -182,9 +147,14 @@ public class MainActivity extends AppCompatActivity {
     void loadDir(File dir) {
         currentDir = dir;
         tvPath.setText(dir.getAbsolutePath());
+        boolean showHidden = prefs.getBoolean("show_hidden", false);
         File[] files = dir.listFiles();
         List<File> list = new ArrayList<>();
-        if (files != null) for (File f : files) if (!f.isHidden()) list.add(f);
+        if (files != null) {
+            for (File f : files) {
+                if (showHidden || !f.isHidden()) list.add(f);
+            }
+        }
         Collections.sort(list, (a, b) -> {
             if (a.isDirectory() && !b.isDirectory()) return -1;
             if (!a.isDirectory() && b.isDirectory()) return 1;
@@ -277,6 +247,46 @@ public class MainActivity extends AppCompatActivity {
                     else Toast.makeText(this, "Hata", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("İptal", null).show();
+    }
+
+    private void createNewFile() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 20, 40, 20);
+
+        EditText etName = new EditText(this);
+        etName.setHint("Dosya adı (örn: notlar.txt)");
+
+        EditText etContent = new EditText(this);
+        etContent.setHint("İçerik (isteğe bağlı)");
+        etContent.setMinLines(3);
+
+        layout.addView(etName);
+        layout.addView(etContent);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Yeni Dosya")
+                .setView(layout)
+                .setPositiveButton("Oluştur", (d, w) -> {
+                    String name = etName.getText().toString().trim();
+                    String content = etContent.getText().toString();
+                    if (name.isEmpty()) {
+                        Toast.makeText(this, "Dosya adı boş olamaz", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    File newFile = new File(currentDir, name);
+                    try {
+                        FileWriter fw = new FileWriter(newFile);
+                        fw.write(content);
+                        fw.close();
+                        loadDir(currentDir);
+                        Toast.makeText(this, "Dosya oluşturuldu!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("İptal", null)
+                .show();
     }
 
     @Override
