@@ -4,7 +4,10 @@
         <item name="colorPrimary">#1565C0</item>
         <item name="colorPrimaryDark">#0D47A1</item>
         <item name="colorAccent">#00BCD4</item>
-        <item name="android:windowBackground">#121212</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:colorBackground">#000000</item>
         <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#AAAAAA</item>
+        <item name="android:listDivider">@android:color/transparent</item>
     </style>
 </resources>
