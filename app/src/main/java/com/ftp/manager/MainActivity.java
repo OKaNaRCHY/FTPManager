@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("FTP Manager");
+            getSupportActionBar().setTitle(R.string.app_name);
         }
 
         tvPath = findViewById(R.id.tv_path);
@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
         SearchView searchView = (SearchView) searchItem.getActionView();
 
         if (searchView != null) {
-            searchView.setQueryHint("Dosya ara...");
+            searchView.setQueryHint(getString(R.string.search_hint));
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                 @Override
                 public boolean onQueryTextSubmit(String query) {
@@ -113,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
                         tvPath.setText(currentDir != null ?
                                 currentDir.getAbsolutePath() : "");
                     } else {
-                        // 300ms gecikme ile ara — her tuş vuruşunda aramayı engeller
                         scheduleSearch(newText);
                     }
                     return true;
@@ -141,11 +140,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void scheduleSearch(String query) {
-        // Önceki aramayı iptal et
         if (searchRunnable != null) {
             mainHandler.removeCallbacks(searchRunnable);
         }
-        // 300ms sonra ara
         searchRunnable = () -> searchFilesAsync(query);
         mainHandler.postDelayed(searchRunnable, 300);
     }
@@ -159,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void searchFilesAsync(String query) {
         if (currentDir == null) return;
-        tvPath.setText("🔍 Aranıyor...");
+        tvPath.setText(getString(R.string.searching));
 
         searchExecutor.execute(() -> {
             List<File> results = new ArrayList<>();
@@ -170,7 +167,8 @@ public class MainActivity extends AppCompatActivity {
             mainHandler.post(() -> {
                 if (query.equals(searchQuery)) {
                     adapter.setFiles(results);
-                    tvPath.setText("🔍 \"" + query + "\" — " + results.size() + " sonuç");
+                    tvPath.setText("🔍 \"" + query + "\" — " +
+                            results.size() + " " + getString(R.string.search_results));
                 }
             });
         });
@@ -295,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
             i.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(i);
         } catch (Exception e) {
-            Toast.makeText(this, "Bu dosyayı açacak uygulama bulunamadı",
+            Toast.makeText(this, getString(R.string.cannot_open),
                     Toast.LENGTH_SHORT).show();
         }
     }
@@ -316,7 +314,11 @@ public class MainActivity extends AppCompatActivity {
     private void showContextMenu(File f) {
         new AlertDialog.Builder(this)
                 .setTitle(f.getName())
-                .setItems(new String[]{"Aç", "Sil", "Yeniden Adlandır"}, (d, w) -> {
+                .setItems(new String[]{
+                        getString(R.string.open),
+                        getString(R.string.delete),
+                        getString(R.string.rename)
+                }, (d, w) -> {
                     if (w == 0) openFile(f);
                     else if (w == 1) deleteFile(f);
                     else renameFile(f);
@@ -325,91 +327,44 @@ public class MainActivity extends AppCompatActivity {
 
     private void deleteFile(File f) {
         new AlertDialog.Builder(this)
-                .setMessage("\"" + f.getName() + "\" silinsin mi?")
-                .setPositiveButton("Sil", (d, w) -> {
+                .setMessage("\"" + f.getName() + "\" " + getString(R.string.delete_confirm))
+                .setPositiveButton(R.string.delete, (d, w) -> {
                     if (f.delete()) loadDir(currentDir);
-                    else Toast.makeText(this, "Silinemedi", Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.cannot_delete),
+                            Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("İptal", null).show();
+                .setNegativeButton(R.string.cancel, null).show();
     }
 
     private void renameFile(File f) {
         EditText et = new EditText(this);
         et.setText(f.getName());
-        new AlertDialog.Builder(this).setTitle("Yeniden Adlandır").setView(et)
-                .setPositiveButton("Tamam", (d, w) -> {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.rename_title)
+                .setView(et)
+                .setPositiveButton(R.string.ok, (d, w) -> {
                     File nf = new File(f.getParent(), et.getText().toString().trim());
                     if (f.renameTo(nf)) loadDir(currentDir);
-                    else Toast.makeText(this, "Hata", Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.error),
+                            Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("İptal", null).show();
+                .setNegativeButton(R.string.cancel, null).show();
     }
 
     private void createFolder() {
         EditText et = new EditText(this);
-        et.setHint("Klasör adı");
-        new AlertDialog.Builder(this).setTitle("Yeni Klasör").setView(et)
-                .setPositiveButton("Oluştur", (d, w) -> {
+        et.setHint(R.string.folder_name_hint);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.new_folder_title)
+                .setView(et)
+                .setPositiveButton(R.string.create, (d, w) -> {
                     File nf = new File(currentDir, et.getText().toString().trim());
                     if (nf.mkdirs()) loadDir(currentDir);
-                    else Toast.makeText(this, "Hata", Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.error),
+                            Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("İptal", null).show();
+                .setNegativeButton(R.string.cancel, null).show();
     }
 
     private void createNewFile() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(40, 20, 40, 20);
-
-        EditText etName = new EditText(this);
-        etName.setHint("Dosya adı (örn: notlar.txt)");
-        EditText etContent = new EditText(this);
-        etContent.setHint("İçerik (isteğe bağlı)");
-        etContent.setMinLines(3);
-        layout.addView(etName);
-        layout.addView(etContent);
-
-        new AlertDialog.Builder(this)
-                .setTitle("Yeni Dosya")
-                .setView(layout)
-                .setPositiveButton("Oluştur", (d, w) -> {
-                    String name = etName.getText().toString().trim();
-                    String content = etContent.getText().toString();
-                    if (name.isEmpty()) {
-                        Toast.makeText(this, "Dosya adı boş olamaz",
-                                Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    File newFile = new File(currentDir, name);
-                    try {
-                        FileWriter fw = new FileWriter(newFile);
-                        fw.write(content);
-                        fw.close();
-                        loadDir(currentDir);
-                        Toast.makeText(this, "Dosya oluşturuldu!", Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Hata: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("İptal", null)
-                .show();
-    }
-
-    @Override
-    public void onBackPressed() {
-        File parent = currentDir != null ? currentDir.getParentFile() : null;
-        if (parent != null && !currentDir.equals(Environment.getExternalStorageDirectory())) {
-            loadDir(parent);
-        } else {
-            super.onBackPressed();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        searchExecutor.shutdown();
-        super.onDestroy();
-    }
-}
+        LinearLayout layout
