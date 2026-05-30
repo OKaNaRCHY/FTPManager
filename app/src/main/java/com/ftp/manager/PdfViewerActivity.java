@@ -1,9 +1,12 @@
 package com.ftp.manager;
 
 import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.graphics.pdf.PdfRenderer;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -22,11 +25,17 @@ public class PdfViewerActivity extends AppCompatActivity {
     private PdfRenderer.Page currentPage;
     private ParcelFileDescriptor fileDescriptor;
     private ImageView ivPage;
-    private TextView tvPage, tvName;
+    private TextView tvPage, tvName, tvZoom;
     private ProgressBar progress;
-    private Button btnPrev, btnNext;
+    private Button btnPrev, btnNext, btnZoomIn, btnZoomOut;
     private int currentPageIndex = 0;
     private int totalPages = 0;
+
+    private float scaleFactor = 1.0f;
+    private static final float MIN_SCALE = 0.5f;
+    private static final float MAX_SCALE = 4.0f;
+    private ScaleGestureDetector scaleDetector;
+    private Matrix matrix = new Matrix();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +50,25 @@ public class PdfViewerActivity extends AppCompatActivity {
         progress = findViewById(R.id.progress_pdf);
         btnPrev = findViewById(R.id.btn_prev);
         btnNext = findViewById(R.id.btn_next);
+        btnZoomIn = findViewById(R.id.btn_zoom_in);
+        btnZoomOut = findViewById(R.id.btn_zoom_out);
+        tvZoom = findViewById(R.id.tv_zoom);
+
+        // Pinch-to-zoom
+        scaleDetector = new ScaleGestureDetector(this, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(ScaleGestureDetector detector) {
+                scaleFactor *= detector.getScaleFactor();
+                scaleFactor = Math.max(MIN_SCALE, Math.min(scaleFactor, MAX_SCALE));
+                applyZoom();
+                return true;
+            }
+        });
+
+        ivPage.setOnTouchListener((v, event) -> {
+            scaleDetector.onTouchEvent(event);
+            return true;
+        });
 
         String path = getIntent().getStringExtra("file_path");
         if (path == null) { finish(); return; }
@@ -62,11 +90,27 @@ public class PdfViewerActivity extends AppCompatActivity {
         }
 
         btnPrev.setOnClickListener(v -> {
-            if (currentPageIndex > 0) showPage(currentPageIndex - 1);
+            if (currentPageIndex > 0) {
+                scaleFactor = 1.0f;
+                showPage(currentPageIndex - 1);
+            }
         });
 
         btnNext.setOnClickListener(v -> {
-            if (currentPageIndex < totalPages - 1) showPage(currentPageIndex + 1);
+            if (currentPageIndex < totalPages - 1) {
+                scaleFactor = 1.0f;
+                showPage(currentPageIndex + 1);
+            }
+        });
+
+        btnZoomIn.setOnClickListener(v -> {
+            scaleFactor = Math.min(scaleFactor + 0.25f, MAX_SCALE);
+            applyZoom();
+        });
+
+        btnZoomOut.setOnClickListener(v -> {
+            scaleFactor = Math.max(scaleFactor - 0.25f, MIN_SCALE);
+            applyZoom();
         });
     }
 
@@ -86,12 +130,21 @@ public class PdfViewerActivity extends AppCompatActivity {
         currentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
 
         ivPage.setImageBitmap(bitmap);
-        tvPage.setText((index + 1) + " / " + totalPages);
+        ivPage.setScaleType(ImageView.ScaleType.MATRIX);
+        applyZoom();
 
+        tvPage.setText((index + 1) + " / " + totalPages);
         btnPrev.setEnabled(index > 0);
         btnNext.setEnabled(index < totalPages - 1);
 
         progress.setVisibility(View.GONE);
+    }
+
+    private void applyZoom() {
+        matrix.reset();
+        matrix.setScale(scaleFactor, scaleFactor);
+        ivPage.setImageMatrix(matrix);
+        tvZoom.setText((int)(scaleFactor * 100) + "%");
     }
 
     @Override
