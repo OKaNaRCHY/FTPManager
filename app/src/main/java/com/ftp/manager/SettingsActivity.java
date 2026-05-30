@@ -17,13 +17,12 @@ public class SettingsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_settings);
 
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Ayarlar");
+            getSupportActionBar().setTitle(R.string.settings);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
         prefs = getSharedPreferences("FTPManagerPrefs", MODE_PRIVATE);
 
-        // Dark Mode switch
         Switch switchDark = findViewById(R.id.switch_dark_mode);
         switchDark.setChecked(prefs.getBoolean("dark_mode", false));
         switchDark.setOnCheckedChangeListener((btn, isChecked) -> {
@@ -32,7 +31,6 @@ public class SettingsActivity extends AppCompatActivity {
                     AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
         });
 
-        // Gizli dosyalar switch
         Switch switchHidden = findViewById(R.id.switch_hidden_files);
         switchHidden.setChecked(prefs.getBoolean("show_hidden", false));
         switchHidden.setOnCheckedChangeListener((btn, isChecked) -> {
