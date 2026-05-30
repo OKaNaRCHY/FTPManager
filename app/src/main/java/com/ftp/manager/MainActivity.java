@@ -9,6 +9,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -32,6 +34,8 @@ import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,6 +46,9 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private List<File> allFiles = new ArrayList<>();
     private String searchQuery = "";
+    private ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Runnable searchRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,7 +99,8 @@ public class MainActivity extends AppCompatActivity {
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                 @Override
                 public boolean onQueryTextSubmit(String query) {
-                    searchFiles(query);
+                    searchQuery = query;
+                    scheduleSearch(query);
                     return true;
                 }
 
@@ -100,11 +108,13 @@ public class MainActivity extends AppCompatActivity {
                 public boolean onQueryTextChange(String newText) {
                     searchQuery = newText;
                     if (newText.isEmpty()) {
+                        cancelSearch();
                         adapter.setFiles(allFiles);
                         tvPath.setText(currentDir != null ?
                                 currentDir.getAbsolutePath() : "");
                     } else {
-                        searchFiles(newText);
+                        // 300ms gecikme ile ara — her tuş vuruşunda aramayı engeller
+                        scheduleSearch(newText);
                     }
                     return true;
                 }
@@ -118,6 +128,7 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public boolean onMenuItemActionCollapse(MenuItem item) {
+                    cancelSearch();
                     searchQuery = "";
                     adapter.setFiles(allFiles);
                     tvPath.setText(currentDir != null ?
@@ -129,18 +140,40 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    // Tüm alt klasörlerde recursive arama
-    private void searchFiles(String query) {
-        if (query.isEmpty() || currentDir == null) return;
+    private void scheduleSearch(String query) {
+        // Önceki aramayı iptal et
+        if (searchRunnable != null) {
+            mainHandler.removeCallbacks(searchRunnable);
+        }
+        // 300ms sonra ara
+        searchRunnable = () -> searchFilesAsync(query);
+        mainHandler.postDelayed(searchRunnable, 300);
+    }
 
-        List<File> results = new ArrayList<>();
-        searchRecursive(currentDir, query.toLowerCase(), results);
+    private void cancelSearch() {
+        if (searchRunnable != null) {
+            mainHandler.removeCallbacks(searchRunnable);
+            searchRunnable = null;
+        }
+    }
 
-        Collections.sort(results, (a, b) ->
-                a.getName().compareToIgnoreCase(b.getName()));
+    private void searchFilesAsync(String query) {
+        if (currentDir == null) return;
+        tvPath.setText("🔍 Aranıyor...");
 
-        adapter.setFiles(results);
-        tvPath.setText("🔍 \"" + query + "\" — " + results.size() + " sonuç");
+        searchExecutor.execute(() -> {
+            List<File> results = new ArrayList<>();
+            searchRecursive(currentDir, query.toLowerCase(), results);
+            Collections.sort(results, (a, b) ->
+                    a.getName().compareToIgnoreCase(b.getName()));
+
+            mainHandler.post(() -> {
+                if (query.equals(searchQuery)) {
+                    adapter.setFiles(results);
+                    tvPath.setText("🔍 \"" + query + "\" — " + results.size() + " sonuç");
+                }
+            });
+        });
     }
 
     private void searchRecursive(File dir, String query, List<File> results) {
@@ -231,7 +264,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         if (!searchQuery.isEmpty()) {
-            searchFiles(searchQuery);
+            searchFilesAsync(searchQuery);
         } else {
             adapter.setFiles(allFiles);
         }
@@ -331,11 +364,9 @@ public class MainActivity extends AppCompatActivity {
 
         EditText etName = new EditText(this);
         etName.setHint("Dosya adı (örn: notlar.txt)");
-
         EditText etContent = new EditText(this);
         etContent.setHint("İçerik (isteğe bağlı)");
         etContent.setMinLines(3);
-
         layout.addView(etName);
         layout.addView(etContent);
 
@@ -374,5 +405,11 @@ public class MainActivity extends AppCompatActivity {
         } else {
             super.onBackPressed();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        searchExecutor.shutdown();
+        super.onDestroy();
     }
 }
