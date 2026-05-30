@@ -2,9 +2,7 @@ package com.ftp.manager;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.widget.CompoundButton;
 import android.widget.Switch;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -25,17 +23,20 @@ public class SettingsActivity extends AppCompatActivity {
 
         prefs = getSharedPreferences("FTPManagerPrefs", MODE_PRIVATE);
 
+        // Dark Mode switch
         Switch switchDark = findViewById(R.id.switch_dark_mode);
-        boolean isDark = prefs.getBoolean("dark_mode", false);
-        switchDark.setChecked(isDark);
-
-        switchDark.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        switchDark.setChecked(prefs.getBoolean("dark_mode", false));
+        switchDark.setOnCheckedChangeListener((btn, isChecked) -> {
             prefs.edit().putBoolean("dark_mode", isChecked).apply();
-            if (isChecked) {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-            }
+            AppCompatDelegate.setDefaultNightMode(isChecked ?
+                    AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+        });
+
+        // Gizli dosyalar switch
+        Switch switchHidden = findViewById(R.id.switch_hidden_files);
+        switchHidden.setChecked(prefs.getBoolean("show_hidden", false));
+        switchHidden.setOnCheckedChangeListener((btn, isChecked) -> {
+            prefs.edit().putBoolean("show_hidden", isChecked).apply();
         });
     }
 
