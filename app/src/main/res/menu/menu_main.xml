@@ -4,34 +4,34 @@
 
     <item
         android:id="@+id/action_search"
-        android:title="Ara"
+        android:title="@string/search_hint"
         android:icon="@android:drawable/ic_menu_search"
         app:showAsAction="always"
         app:actionViewClass="androidx.appcompat.widget.SearchView"/>
 
     <item
         android:id="@+id/action_new_file"
-        android:title="Yeni Dosya"
+        android:title="@string/new_file"
         app:showAsAction="never"/>
 
     <item
         android:id="@+id/action_new_folder"
-        android:title="Yeni Klasör"
+        android:title="@string/new_folder"
         app:showAsAction="never"/>
 
     <item
         android:id="@+id/action_ftp_server"
-        android:title="FTP Sunucusu"
+        android:title="@string/ftp_server"
         app:showAsAction="never"/>
 
     <item
         android:id="@+id/action_ftp"
-        android:title="FTP Bağlan"
+        android:title="@string/ftp_connect"
         app:showAsAction="never"/>
 
     <item
         android:id="@+id/action_settings"
-        android:title="Ayarlar"
+        android:title="@string/settings"
         app:showAsAction="never"/>
 
 </menu>
