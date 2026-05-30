@@ -12,7 +12,6 @@ import android.os.Environment;
 import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -43,11 +42,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         prefs = getSharedPreferences("FTPManagerPrefs", MODE_PRIVATE);
         boolean isDark = prefs.getBoolean("dark_mode", false);
-        if (isDark) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        }
+        AppCompatDelegate.setDefaultNightMode(isDark ?
+                AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -61,19 +57,10 @@ public class MainActivity extends AppCompatActivity {
         recycler.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new FileAdapter(item -> {
-            if (item.isDirectory()) {
-                loadDir(item);
-            } else {
-                openFile(item);
-            }
+            if (item.isDirectory()) loadDir(item);
+            else openFile(item);
         }, item -> showContextMenu(item));
         recycler.setAdapter(adapter);
-
-        Button btnFtp = findViewById(R.id.btn_ftp);
-        btnFtp.setOnClickListener(v -> startActivity(new Intent(this, FtpActivity.class)));
-
-        Button btnFolder = findViewById(R.id.btn_new_folder);
-        btnFolder.setOnClickListener(v -> createFolder());
 
         requestPermissions();
     }
@@ -87,20 +74,20 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
+        if (id == R.id.action_new_folder) {
+            createFolder();
+            return true;
+        } else if (id == R.id.action_ftp) {
+            startActivity(new Intent(this, FtpActivity.class));
             return true;
         } else if (id == R.id.action_dark_mode) {
             boolean isDark = prefs.getBoolean("dark_mode", false);
             prefs.edit().putBoolean("dark_mode", !isDark).apply();
-            if (!isDark) {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-            }
+            AppCompatDelegate.setDefaultNightMode(!isDark ?
+                    AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
             return true;
-        } else if (id == R.id.action_ftp) {
-            startActivity(new Intent(this, FtpActivity.class));
+        } else if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -165,18 +152,13 @@ public class MainActivity extends AppCompatActivity {
         String ext = f.getName().contains(".") ?
                 f.getName().substring(f.getName().lastIndexOf('.') + 1).toLowerCase() : "";
 
-        // Dahili text editör
-        if (ext.equals("txt") || ext.equals("log") || ext.equals("md") ||
-                ext.equals("java") || ext.equals("xml") || ext.equals("json") ||
-                ext.equals("html") || ext.equals("css") || ext.equals("js") ||
-                ext.equals("py") || ext.equals("gradle") || ext.equals("kt")) {
+        if (ext.matches("txt|log|md|java|xml|json|html|css|js|py|gradle|kt")) {
             Intent i = new Intent(this, TextEditorActivity.class);
             i.putExtra("file_path", f.getAbsolutePath());
             startActivity(i);
             return;
         }
 
-        // Dahili PDF viewer
         if (ext.equals("pdf")) {
             Intent i = new Intent(this, PdfViewerActivity.class);
             i.putExtra("file_path", f.getAbsolutePath());
@@ -184,10 +166,8 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Diğer dosyalar için sistem uygulaması
         try {
-            Uri uri = FileProvider.getUriForFile(this,
-                    getPackageName() + ".provider", f);
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", f);
             Intent i = new Intent(Intent.ACTION_VIEW);
             i.setDataAndType(uri, getMime(ext));
             i.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -202,8 +182,6 @@ public class MainActivity extends AppCompatActivity {
             case "jpg": case "jpeg": case "png": case "gif": case "webp": return "image/*";
             case "mp4": case "mkv": case "avi": case "mov": return "video/*";
             case "mp3": case "wav": case "flac": case "aac": return "audio/*";
-            case "pdf": return "application/pdf";
-            case "txt": return "text/plain";
             case "apk": return "application/vnd.android.package-archive";
             case "zip": return "application/zip";
             case "doc": case "docx": return "application/msword";
