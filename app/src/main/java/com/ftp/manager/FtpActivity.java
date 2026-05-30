@@ -40,7 +40,7 @@ public class FtpActivity extends AppCompatActivity {
         setContentView(R.layout.activity_ftp);
 
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("FTP Bağlantısı");
+            getSupportActionBar().setTitle(R.string.ftp_connect_title);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
@@ -53,11 +53,10 @@ public class FtpActivity extends AppCompatActivity {
         recycler = findViewById(R.id.recycler_ftp);
         recycler.setLayoutManager(new LinearLayoutManager(this));
 
-        // Otomatik IP yaz
-        String ip = getWifiIpAddress();
+        String ip = getWifiIp();
         if (!ip.isEmpty()) {
             etHost.setText(ip);
-            etHost.setHint("IP Adresi: " + ip);
+            etHost.setHint(getString(R.string.ip_label) + ip);
         }
 
         btnConnect.setOnClickListener(v -> {
@@ -66,16 +65,14 @@ public class FtpActivity extends AppCompatActivity {
         });
     }
 
-    private String getWifiIpAddress() {
+    private String getWifiIp() {
         try {
             WifiManager wifiManager = (WifiManager) getApplicationContext()
                     .getSystemService(Context.WIFI_SERVICE);
             if (wifiManager != null && wifiManager.isWifiEnabled()) {
                 WifiInfo wifiInfo = wifiManager.getConnectionInfo();
                 int ip = wifiInfo.getIpAddress();
-                if (ip != 0) {
-                    return Formatter.formatIpAddress(ip);
-                }
+                if (ip != 0) return Formatter.formatIpAddress(ip);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -89,14 +86,14 @@ public class FtpActivity extends AppCompatActivity {
         String user = etUser.getText().toString().trim();
         String pass = etPass.getText().toString();
 
-        if (host.isEmpty()) { etHost.setError("Gerekli"); return; }
+        if (host.isEmpty()) { etHost.setError(getString(R.string.error)); return; }
         int port = 21;
         try { port = Integer.parseInt(portStr); } catch (Exception ignored) {}
         if (user.isEmpty()) user = "anonymous";
 
         final String fUser = user, fPass = pass;
         final int fPort = port;
-        tvStatus.setText("Bağlanıyor...");
+        tvStatus.setText(getString(R.string.searching));
 
         executor.execute(() -> {
             try {
@@ -104,16 +101,16 @@ public class FtpActivity extends AppCompatActivity {
                 ftp.enterLocalPassiveMode();
                 ftp.setFileType(FTP.BINARY_FILE_TYPE);
                 boolean ok = ftp.login(fUser, fPass);
-                final String msg = ok ? "✅ Bağlı: " + host : "❌ Giriş hatası";
+                final String msg = ok ? "✅ " + host : "❌ " + getString(R.string.error);
                 runOnUiThread(() -> {
                     tvStatus.setText(msg);
                     if (ok) {
-                        btnConnect.setText("Bağlantıyı Kes");
+                        btnConnect.setText(R.string.disconnect);
                         listFiles("/");
                     }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> tvStatus.setText("❌ Hata: " + e.getMessage()));
+                runOnUiThread(() -> tvStatus.setText("❌ " + e.getMessage()));
             }
         });
     }
@@ -136,15 +133,17 @@ public class FtpActivity extends AppCompatActivity {
                     FileAdapter adapter = new FileAdapter(
                         f -> {
                             if (f.isDirectory()) listFiles(f.getAbsolutePath());
-                            else Toast.makeText(this, f.getName(), Toast.LENGTH_SHORT).show();
+                            else Toast.makeText(this, f.getName(),
+                                    Toast.LENGTH_SHORT).show();
                         },
-                        f -> Toast.makeText(this, f.getName(), Toast.LENGTH_SHORT).show()
+                        f -> Toast.makeText(this, f.getName(),
+                                Toast.LENGTH_SHORT).show()
                     );
                     adapter.setFiles(list);
                     recycler.setAdapter(adapter);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> tvStatus.setText("❌ Liste hatası: " + e.getMessage()));
+                runOnUiThread(() -> tvStatus.setText("❌ " + e.getMessage()));
             }
         });
     }
@@ -153,8 +152,8 @@ public class FtpActivity extends AppCompatActivity {
         executor.execute(() -> {
             try { ftp.logout(); ftp.disconnect(); } catch (Exception ignored) {}
             runOnUiThread(() -> {
-                tvStatus.setText("Bağlı değil");
-                btnConnect.setText("Bağlan");
+                tvStatus.setText(getString(R.string.not_connected));
+                btnConnect.setText(R.string.connect);
                 recycler.setAdapter(null);
             });
         });
