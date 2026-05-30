@@ -17,20 +17,20 @@
         android:id="@+id/tv_ip"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="IP: Bekleniyor..."
         android:textSize="16sp"
         android:padding="12dp"
-        android:background="#E3F2FD"
+        android:textColor="?android:attr/textColorPrimary"
+        android:background="@android:color/transparent"
         android:layout_marginBottom="8dp"/>
 
     <TextView
         android:id="@+id/tv_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="⏹ Sunucu kapalı"
         android:textSize="16sp"
         android:gravity="center"
         android:padding="12dp"
+        android:textColor="?android:attr/textColorPrimary"
         android:layout_marginBottom="16dp"/>
 
     <EditText
@@ -82,7 +82,7 @@
         android:layout_height="wrap_content"
         android:text="💡 PC'den bağlanmak için FileZilla veya WinSCP kullanın"
         android:textSize="12sp"
-        android:textColor="#757575"
+        android:textColor="?android:attr/textColorSecondary"
         android:layout_marginTop="16dp"
         android:gravity="center"/>
 
