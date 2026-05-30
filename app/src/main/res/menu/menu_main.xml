@@ -13,6 +13,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_ftp_server"
+        android:title="FTP Sunucusu"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_ftp"
         android:title="FTP Bağlan"
         app:showAsAction="never"/>
