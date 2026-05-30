@@ -46,9 +46,10 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.info.setText("Klasör");
         } else {
             long s = f.length();
-            String size = s < 1024 ? s + "B" : s < 1048576 ?
-                    String.format(Locale.getDefault(), "%.1fKB", s/1024.0) :
-                    String.format(Locale.getDefault(), "%.1fMB", s/1048576.0);
+            String size = s < 1024 ? s + " B" :
+                    s < 1048576 ? String.format(Locale.getDefault(), "%.1f KB", s/1024.0) :
+                    s < 1073741824 ? String.format(Locale.getDefault(), "%.1f MB", s/1048576.0) :
+                    String.format(Locale.getDefault(), "%.1f GB", s/1073741824.0);
             h.info.setText(size);
         }
         h.itemView.setOnClickListener(v -> onClick.onClick(f));
@@ -56,15 +57,49 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
     }
 
     private String getIcon(String name) {
-        String e = name.contains(".") ? name.substring(name.lastIndexOf('.')+1).toLowerCase() : "";
+        String e = name.contains(".") ?
+                name.substring(name.lastIndexOf('.')+1).toLowerCase() : "";
         switch (e) {
-            case "jpg": case "jpeg": case "png": case "gif": return "🖼";
-            case "mp4": case "mkv": case "avi": return "🎬";
-            case "mp3": case "wav": case "flac": return "🎵";
-            case "pdf": return "📄";
-            case "zip": case "rar": return "📦";
+            // Resim
+            case "jpg": case "jpeg": case "png": case "gif":
+            case "webp": case "bmp": case "svg": return "🖼️";
+            // Video
+            case "mp4": case "mkv": case "avi": case "mov":
+            case "wmv": case "flv": case "3gp": return "🎬";
+            // Müzik
+            case "mp3": case "wav": case "flac": case "aac":
+            case "ogg": case "m4a": case "wma": return "🎵";
+            // PDF
+            case "pdf": return "📕";
+            // Word
+            case "doc": case "docx": case "odt": return "📘";
+            // Excel
+            case "xls": case "xlsx": case "ods": case "csv": return "📗";
+            // PowerPoint
+            case "ppt": case "pptx": case "odp": return "📙";
+            // Arşiv
+            case "zip": case "rar": case "7z": case "tar":
+            case "gz": case "bz2": return "📦";
+            // APK
             case "apk": return "📱";
-            case "txt": return "📝";
+            // Kod
+            case "java": case "kt": case "py": case "js":
+            case "ts": case "cpp": case "c": case "h": return "💻";
+            // Web
+            case "html": case "htm": case "css": return "🌐";
+            // Metin
+            case "txt": case "log": case "md": return "📝";
+            // JSON/XML/Config
+            case "json": case "xml": case "yaml": case "yml":
+            case "ini": case "cfg": case "gradle": return "⚙️";
+            // Font
+            case "ttf": case "otf": case "woff": return "🔤";
+            // APK yüklü
+            case "xapk": return "📲";
+            // Veritabanı
+            case "db": case "sqlite": case "sql": return "🗄️";
+            // ISO/IMG
+            case "iso": case "img": return "💿";
             default: return "📄";
         }
     }
