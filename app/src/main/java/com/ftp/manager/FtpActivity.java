@@ -1,6 +1,10 @@
 package com.ftp.manager;
 
+import android.content.Context;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.text.format.Formatter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -35,6 +39,11 @@ public class FtpActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ftp);
 
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("FTP Bağlantısı");
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+
         etHost = findViewById(R.id.et_host);
         etPort = findViewById(R.id.et_port);
         etUser = findViewById(R.id.et_user);
@@ -44,10 +53,34 @@ public class FtpActivity extends AppCompatActivity {
         recycler = findViewById(R.id.recycler_ftp);
         recycler.setLayoutManager(new LinearLayoutManager(this));
 
+        // Otomatik IP yaz
+        String ip = getWifiIpAddress();
+        if (!ip.isEmpty()) {
+            etHost.setText(ip);
+            etHost.setHint("IP Adresi: " + ip);
+        }
+
         btnConnect.setOnClickListener(v -> {
             if (ftp.isConnected()) disconnect();
             else connect();
         });
+    }
+
+    private String getWifiIpAddress() {
+        try {
+            WifiManager wifiManager = (WifiManager) getApplicationContext()
+                    .getSystemService(Context.WIFI_SERVICE);
+            if (wifiManager != null && wifiManager.isWifiEnabled()) {
+                WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                int ip = wifiInfo.getIpAddress();
+                if (ip != 0) {
+                    return Formatter.formatIpAddress(ip);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 
     private void connect() {
@@ -71,13 +104,16 @@ public class FtpActivity extends AppCompatActivity {
                 ftp.enterLocalPassiveMode();
                 ftp.setFileType(FTP.BINARY_FILE_TYPE);
                 boolean ok = ftp.login(fUser, fPass);
-                final String msg = ok ? "Bağlı: " + host : "Giriş hatası";
+                final String msg = ok ? "✅ Bağlı: " + host : "❌ Giriş hatası";
                 runOnUiThread(() -> {
                     tvStatus.setText(msg);
-                    if (ok) { btnConnect.setText("Bağlantıyı Kes"); listFiles("/"); }
+                    if (ok) {
+                        btnConnect.setText("Bağlantıyı Kes");
+                        listFiles("/");
+                    }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> tvStatus.setText("Hata: " + e.getMessage()));
+                runOnUiThread(() -> tvStatus.setText("❌ Hata: " + e.getMessage()));
             }
         });
     }
@@ -108,7 +144,7 @@ public class FtpActivity extends AppCompatActivity {
                     recycler.setAdapter(adapter);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> tvStatus.setText("Liste hatası: " + e.getMessage()));
+                runOnUiThread(() -> tvStatus.setText("❌ Liste hatası: " + e.getMessage()));
             }
         });
     }
@@ -125,8 +161,16 @@ public class FtpActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return true;
+    }
+
+    @Override
     protected void onDestroy() {
-        executor.execute(() -> { try { if (ftp.isConnected()) ftp.disconnect(); } catch (Exception ignored) {} });
+        executor.execute(() -> {
+            try { if (ftp.isConnected()) ftp.disconnect(); } catch (Exception ignored) {}
+        });
         executor.shutdown();
         super.onDestroy();
     }
