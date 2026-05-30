@@ -56,24 +56,19 @@ public class MainActivity extends AppCompatActivity {
         boolean isDark = prefs.getBoolean("dark_mode", false);
         AppCompatDelegate.setDefaultNightMode(isDark ?
                 AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle(R.string.app_name);
         }
-
         tvPath = findViewById(R.id.tv_path);
         recycler = findViewById(R.id.recycler);
         recycler.setLayoutManager(new LinearLayoutManager(this));
-
         adapter = new FileAdapter(item -> {
             if (item.isDirectory()) loadDir(item);
             else openFile(item);
         }, item -> showContextMenu(item));
         recycler.setAdapter(adapter);
-
         requestPermissions();
     }
 
@@ -90,10 +85,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
-
         MenuItem searchItem = menu.findItem(R.id.action_search);
         SearchView searchView = (SearchView) searchItem.getActionView();
-
         if (searchView != null) {
             searchView.setQueryHint(getString(R.string.search_hint));
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -103,7 +96,6 @@ public class MainActivity extends AppCompatActivity {
                     scheduleSearch(query);
                     return true;
                 }
-
                 @Override
                 public boolean onQueryTextChange(String newText) {
                     searchQuery = newText;
@@ -118,13 +110,11 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 }
             });
-
             searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
                 @Override
                 public boolean onMenuItemActionExpand(MenuItem item) {
                     return true;
                 }
-
                 @Override
                 public boolean onMenuItemActionCollapse(MenuItem item) {
                     cancelSearch();
@@ -157,13 +147,11 @@ public class MainActivity extends AppCompatActivity {
     private void searchFilesAsync(String query) {
         if (currentDir == null) return;
         tvPath.setText(getString(R.string.searching));
-
         searchExecutor.execute(() -> {
             List<File> results = new ArrayList<>();
             searchRecursive(currentDir, query.toLowerCase(), results);
             Collections.sort(results, (a, b) ->
                     a.getName().compareToIgnoreCase(b.getName()));
-
             mainHandler.post(() -> {
                 if (query.equals(searchQuery)) {
                     adapter.setFiles(results);
@@ -260,7 +248,6 @@ public class MainActivity extends AppCompatActivity {
             if (!a.isDirectory() && b.isDirectory()) return 1;
             return a.getName().compareToIgnoreCase(b.getName());
         });
-
         if (!searchQuery.isEmpty()) {
             searchFilesAsync(searchQuery);
         } else {
@@ -271,21 +258,18 @@ public class MainActivity extends AppCompatActivity {
     private void openFile(File f) {
         String ext = f.getName().contains(".") ?
                 f.getName().substring(f.getName().lastIndexOf('.') + 1).toLowerCase() : "";
-
         if (ext.matches("txt|log|md|java|xml|json|html|css|js|py|gradle|kt")) {
             Intent i = new Intent(this, TextEditorActivity.class);
             i.putExtra("file_path", f.getAbsolutePath());
             startActivity(i);
             return;
         }
-
         if (ext.equals("pdf")) {
             Intent i = new Intent(this, PdfViewerActivity.class);
             i.putExtra("file_path", f.getAbsolutePath());
             startActivity(i);
             return;
         }
-
         try {
             Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", f);
             Intent i = new Intent(Intent.ACTION_VIEW);
@@ -293,8 +277,7 @@ public class MainActivity extends AppCompatActivity {
             i.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(i);
         } catch (Exception e) {
-            Toast.makeText(this, getString(R.string.cannot_open),
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.cannot_open), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -367,4 +350,57 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void createNewFile() {
-        LinearLayout layout
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 20, 40, 20);
+        EditText etName = new EditText(this);
+        etName.setHint(R.string.file_name_hint);
+        EditText etContent = new EditText(this);
+        etContent.setHint(R.string.file_content_hint);
+        etContent.setMinLines(3);
+        layout.addView(etName);
+        layout.addView(etContent);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.new_file_title)
+                .setView(layout)
+                .setPositiveButton(R.string.create, (d, w) -> {
+                    String name = etName.getText().toString().trim();
+                    String content = etContent.getText().toString();
+                    if (name.isEmpty()) {
+                        Toast.makeText(this, getString(R.string.file_name_empty),
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    File newFile = new File(currentDir, name);
+                    try {
+                        FileWriter fw = new FileWriter(newFile);
+                        fw.write(content);
+                        fw.close();
+                        loadDir(currentDir);
+                        Toast.makeText(this, getString(R.string.file_created),
+                                Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, getString(R.string.error) + ": " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    @Override
+    public void onBackPressed() {
+        File parent = currentDir != null ? currentDir.getParentFile() : null;
+        if (parent != null && !currentDir.equals(Environment.getExternalStorageDirectory())) {
+            loadDir(parent);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        searchExecutor.shutdown();
+        super.onDestroy();
+    }
+}
