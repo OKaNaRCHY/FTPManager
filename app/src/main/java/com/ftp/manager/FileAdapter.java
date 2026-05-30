@@ -10,28 +10,58 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
 
     interface OnClick { void onClick(File f); }
+    interface OnSelectionChanged { void onSelectionChanged(int count); }
 
     private List<File> files = new ArrayList<>();
     private final OnClick onClick, onLongClick;
+    private OnSelectionChanged onSelectionChanged;
+    private Set<Integer> selectedPositions = new HashSet<>();
+    private boolean multiSelectMode = false;
 
     public FileAdapter(OnClick onClick, OnClick onLongClick) {
         this.onClick = onClick;
         this.onLongClick = onLongClick;
     }
 
+    public void setOnSelectionChanged(OnSelectionChanged listener) {
+        this.onSelectionChanged = listener;
+    }
+
     public void setFiles(List<File> list) {
         files = new ArrayList<>(list);
+        clearSelection();
         notifyDataSetChanged();
     }
 
-    public List<File> getFiles() {
-        return files;
+    public List<File> getSelectedFiles() {
+        List<File> selected = new ArrayList<>();
+        for (int pos : selectedPositions) {
+            if (pos < files.size()) selected.add(files.get(pos));
+        }
+        return selected;
+    }
+
+    public void clearSelection() {
+        selectedPositions.clear();
+        multiSelectMode = false;
+        notifyDataSetChanged();
+        if (onSelectionChanged != null) onSelectionChanged.onSelectionChanged(0);
+    }
+
+    public boolean isMultiSelectMode() {
+        return multiSelectMode;
+    }
+
+    public int getSelectedCount() {
+        return selectedPositions.size();
     }
 
     @NonNull
@@ -48,8 +78,9 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         h.icon.setText(f.isDirectory() ? "📁" : getIcon(f.getName()));
         h.icon.setTextSize(28);
         h.name.setText(f.getName());
+
         if (f.isDirectory()) {
-            h.info.setText("Klasör");
+            h.info.setText(R.string.folder);
         } else {
             long s = f.length();
             String size = s < 1024 ? s + " B" :
@@ -58,8 +89,46 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
                     String.format(Locale.getDefault(), "%.1f GB", s/1073741824.0);
             h.info.setText(size);
         }
-        h.itemView.setOnClickListener(v -> onClick.onClick(f));
-        h.itemView.setOnLongClickListener(v -> { onLongClick.onClick(f); return true; });
+
+        // Seçili görünüm
+        if (selectedPositions.contains(pos)) {
+            h.itemView.setBackgroundColor(0x331565C0);
+        } else {
+            h.itemView.setBackgroundColor(0x00000000);
+        }
+
+        h.itemView.setOnClickListener(v -> {
+            int p = h.getAdapterPosition();
+            if (multiSelectMode) {
+                toggleSelection(p);
+            } else {
+                onClick.onClick(files.get(p));
+            }
+        });
+
+        h.itemView.setOnLongClickListener(v -> {
+            int p = h.getAdapterPosition();
+            if (!multiSelectMode) {
+                multiSelectMode = true;
+                toggleSelection(p);
+            } else {
+                onLongClick.onClick(files.get(p));
+            }
+            return true;
+        });
+    }
+
+    private void toggleSelection(int pos) {
+        if (selectedPositions.contains(pos)) {
+            selectedPositions.remove(pos);
+        } else {
+            selectedPositions.add(pos);
+        }
+        if (selectedPositions.isEmpty()) multiSelectMode = false;
+        notifyItemChanged(pos);
+        if (onSelectionChanged != null) {
+            onSelectionChanged.onSelectionChanged(selectedPositions.size());
+        }
     }
 
     private String getIcon(String name) {
