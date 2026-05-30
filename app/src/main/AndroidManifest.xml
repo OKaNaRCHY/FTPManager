@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:allowBackup="true"
@@ -27,9 +28,15 @@
         </activity>
 
         <activity android:name=".FtpActivity" android:exported="false"/>
+        <activity android:name=".FtpServerActivity" android:exported="false"/>
         <activity android:name=".SettingsActivity" android:exported="false"/>
         <activity android:name=".TextEditorActivity" android:exported="false"/>
         <activity android:name=".PdfViewerActivity" android:exported="false"/>
+
+        <service
+            android:name=".FtpServerService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
 
         <provider
             android:name="androidx.core.content.FileProvider"
