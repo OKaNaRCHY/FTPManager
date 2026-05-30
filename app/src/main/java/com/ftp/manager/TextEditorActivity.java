@@ -38,7 +38,6 @@ public class TextEditorActivity extends AppCompatActivity {
             getSupportActionBar().hide();
         }
 
-        // Dosyayı oku
         try {
             StringBuilder sb = new StringBuilder();
             BufferedReader br = new BufferedReader(new FileReader(file));
@@ -49,7 +48,8 @@ public class TextEditorActivity extends AppCompatActivity {
             br.close();
             editText.setText(sb.toString());
         } catch (IOException e) {
-            Toast.makeText(this, "Dosya okunamadı", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.cannot_read),
+                    Toast.LENGTH_SHORT).show();
         }
 
         btnSave.setOnClickListener(v -> saveFile());
@@ -60,9 +60,9 @@ public class TextEditorActivity extends AppCompatActivity {
             FileWriter fw = new FileWriter(file);
             fw.write(editText.getText().toString());
             fw.close();
-            Toast.makeText(this, "Kaydedildi!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.saved), Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
-            Toast.makeText(this, "Kaydedilemedi", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.cannot_save), Toast.LENGTH_SHORT).show();
         }
     }
 
