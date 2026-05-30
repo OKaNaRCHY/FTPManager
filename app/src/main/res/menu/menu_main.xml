@@ -3,6 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_search"
+        android:title="Ara"
+        android:icon="@android:drawable/ic_menu_search"
+        app:showAsAction="always"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"/>
+
+    <item
         android:id="@+id/action_new_file"
         android:title="Yeni Dosya"
         app:showAsAction="never"/>
@@ -20,11 +27,6 @@
     <item
         android:id="@+id/action_ftp"
         android:title="FTP Bağlan"
-        app:showAsAction="never"/>
-
-    <item
-        android:id="@+id/action_dark_mode"
-        android:title="Dark Mode"
         app:showAsAction="never"/>
 
     <item
