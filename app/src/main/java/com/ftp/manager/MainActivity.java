@@ -92,15 +92,20 @@ public class MainActivity extends AppCompatActivity {
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                 @Override
                 public boolean onQueryTextSubmit(String query) {
-                    searchQuery = query;
-                    filterFiles(query);
+                    searchFiles(query);
                     return true;
                 }
 
                 @Override
                 public boolean onQueryTextChange(String newText) {
                     searchQuery = newText;
-                    filterFiles(newText);
+                    if (newText.isEmpty()) {
+                        adapter.setFiles(allFiles);
+                        tvPath.setText(currentDir != null ?
+                                currentDir.getAbsolutePath() : "");
+                    } else {
+                        searchFiles(newText);
+                    }
                     return true;
                 }
             });
@@ -114,30 +119,41 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public boolean onMenuItemActionCollapse(MenuItem item) {
                     searchQuery = "";
-                    if (currentDir != null) loadDir(currentDir);
+                    adapter.setFiles(allFiles);
+                    tvPath.setText(currentDir != null ?
+                            currentDir.getAbsolutePath() : "");
                     return true;
                 }
             });
         }
-
         return true;
     }
 
-    private void filterFiles(String query) {
-        if (query.isEmpty()) {
-            adapter.setFiles(allFiles);
-            tvPath.setText(currentDir != null ? currentDir.getAbsolutePath() : "");
-            return;
-        }
+    // Tüm alt klasörlerde recursive arama
+    private void searchFiles(String query) {
+        if (query.isEmpty() || currentDir == null) return;
 
-        List<File> filtered = new ArrayList<>();
-        for (File f : allFiles) {
-            if (f.getName().toLowerCase().contains(query.toLowerCase())) {
-                filtered.add(f);
+        List<File> results = new ArrayList<>();
+        searchRecursive(currentDir, query.toLowerCase(), results);
+
+        Collections.sort(results, (a, b) ->
+                a.getName().compareToIgnoreCase(b.getName()));
+
+        adapter.setFiles(results);
+        tvPath.setText("🔍 \"" + query + "\" — " + results.size() + " sonuç");
+    }
+
+    private void searchRecursive(File dir, String query, List<File> results) {
+        File[] files = dir.listFiles();
+        if (files == null) return;
+        for (File f : files) {
+            if (f.getName().toLowerCase().contains(query)) {
+                results.add(f);
+            }
+            if (f.isDirectory()) {
+                searchRecursive(f, query, results);
             }
         }
-        adapter.setFiles(filtered);
-        tvPath.setText("🔍 \"" + query + "\" — " + filtered.size() + " sonuç");
     }
 
     @Override
@@ -215,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         if (!searchQuery.isEmpty()) {
-            filterFiles(searchQuery);
+            searchFiles(searchQuery);
         } else {
             adapter.setFiles(allFiles);
         }
@@ -246,7 +262,8 @@ public class MainActivity extends AppCompatActivity {
             i.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(i);
         } catch (Exception e) {
-            Toast.makeText(this, "Bu dosyayı açacak uygulama bulunamadı", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Bu dosyayı açacak uygulama bulunamadı",
+                    Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -329,7 +346,8 @@ public class MainActivity extends AppCompatActivity {
                     String name = etName.getText().toString().trim();
                     String content = etContent.getText().toString();
                     if (name.isEmpty()) {
-                        Toast.makeText(this, "Dosya adı boş olamaz", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Dosya adı boş olamaz",
+                                Toast.LENGTH_SHORT).show();
                         return;
                     }
                     File newFile = new File(currentDir, name);
@@ -340,7 +358,8 @@ public class MainActivity extends AppCompatActivity {
                         loadDir(currentDir);
                         Toast.makeText(this, "Dosya oluşturuldu!", Toast.LENGTH_SHORT).show();
                     } catch (Exception e) {
-                        Toast.makeText(this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Hata: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton("İptal", null)
