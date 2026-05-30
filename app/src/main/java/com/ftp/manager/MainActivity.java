@@ -13,6 +13,7 @@ import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,6 +27,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -74,7 +76,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_new_folder) {
+        if (id == R.id.action_new_file) {
+            createNewFile();
+            return true;
+        } else if (id == R.id.action_new_folder) {
             createFolder();
             return true;
         } else if (id == R.id.action_ftp) {
@@ -91,6 +96,46 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void createNewFile() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 20, 40, 20);
+
+        EditText etName = new EditText(this);
+        etName.setHint("Dosya adı (örn: notlar.txt)");
+
+        EditText etContent = new EditText(this);
+        etContent.setHint("İçerik (isteğe bağlı)");
+        etContent.setMinLines(3);
+
+        layout.addView(etName);
+        layout.addView(etContent);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Yeni Dosya")
+                .setView(layout)
+                .setPositiveButton("Oluştur", (d, w) -> {
+                    String name = etName.getText().toString().trim();
+                    String content = etContent.getText().toString();
+                    if (name.isEmpty()) {
+                        Toast.makeText(this, "Dosya adı boş olamaz", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    File newFile = new File(currentDir, name);
+                    try {
+                        FileWriter fw = new FileWriter(newFile);
+                        fw.write(content);
+                        fw.close();
+                        loadDir(currentDir);
+                        Toast.makeText(this, "Dosya oluşturuldu!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("İptal", null)
+                .show();
     }
 
     private void requestPermissions() {
