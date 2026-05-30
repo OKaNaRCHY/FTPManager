@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="FTP Sunucusu"
+        android:text="@string/ftp_server_title"
         android:textSize="22sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
@@ -20,7 +20,6 @@
         android:textSize="16sp"
         android:padding="12dp"
         android:textColor="?android:attr/textColorPrimary"
-        android:background="@android:color/transparent"
         android:layout_marginBottom="8dp"/>
 
     <TextView
@@ -37,7 +36,7 @@
         android:id="@+id/et_port"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Port (varsayılan: 2121)"
+        android:hint="@string/port_hint"
         android:inputType="number"
         android:text="2121"
         android:layout_marginBottom="8dp"/>
@@ -46,7 +45,7 @@
         android:id="@+id/et_user"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Kullanıcı Adı"
+        android:hint="@string/username_hint"
         android:text="admin"
         android:layout_marginBottom="8dp"/>
 
@@ -54,7 +53,7 @@
         android:id="@+id/et_pass"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Şifre"
+        android:hint="@string/password_hint"
         android:text="1234"
         android:inputType="textPassword"
         android:layout_marginBottom="16dp"/>
@@ -63,7 +62,7 @@
         android:id="@+id/btn_start"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Sunucuyu Başlat"
+        android:text="@string/server_start"
         android:backgroundTint="#1565C0"
         android:textColor="#FFFFFF"
         android:layout_marginBottom="8dp"/>
@@ -72,7 +71,7 @@
         android:id="@+id/btn_stop"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Sunucuyu Durdur"
+        android:text="@string/server_stop"
         android:backgroundTint="#C62828"
         android:textColor="#FFFFFF"
         android:enabled="false"/>
@@ -80,7 +79,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="💡 PC'den bağlanmak için FileZilla veya WinSCP kullanın"
+        android:text="@string/ftp_hint"
         android:textSize="12sp"
         android:textColor="?android:attr/textColorSecondary"
         android:layout_marginTop="16dp"
