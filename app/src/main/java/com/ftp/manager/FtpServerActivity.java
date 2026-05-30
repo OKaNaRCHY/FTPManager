@@ -45,7 +45,7 @@ public class FtpServerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_ftp_server);
 
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("FTP Sunucusu");
+            getSupportActionBar().setTitle(R.string.ftp_server_title);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
@@ -57,14 +57,14 @@ public class FtpServerActivity extends AppCompatActivity {
         etUser = findViewById(R.id.et_user);
         etPass = findViewById(R.id.et_pass);
 
-        // IP'yi göster
         String ip = getWifiIp();
-        tvIp.setText("📡 IP: " + (ip.isEmpty() ? "WiFi'a bağlı değil" : ip));
+        tvIp.setText(getString(R.string.ip_label) +
+                (ip.isEmpty() ? getString(R.string.wifi_not_connected) : ip));
+        tvStatus.setText(R.string.server_stopped);
 
         btnStart.setOnClickListener(v -> startServer());
         btnStop.setOnClickListener(v -> stopServer());
 
-        // Servise bağlan
         Intent intent = new Intent(this, FtpServerService.class);
         bindService(intent, conn, Context.BIND_AUTO_CREATE);
     }
@@ -89,27 +89,30 @@ public class FtpServerActivity extends AppCompatActivity {
             ftpService.startFtp(port, user, pass, rootDir);
 
             String ip = getWifiIp();
-            tvStatus.setText("▶ Sunucu çalışıyor\nftp://" + ip + ":" + port);
-            tvIp.setText("📡 IP: " + ip + "  Port: " + port);
+            tvStatus.setText(getString(R.string.server_running) +
+                    "\nftp://" + ip + ":" + port);
+            tvIp.setText(getString(R.string.ip_label) + ip + "  Port: " + port);
             btnStart.setEnabled(false);
             btnStop.setEnabled(true);
-            Toast.makeText(this, "FTP Sunucusu başladı!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.ftp_started),
+                    Toast.LENGTH_SHORT).show();
         }
     }
 
     private void stopServer() {
         if (bound && ftpService != null) {
             ftpService.stopFtp();
-            tvStatus.setText("⏹ Sunucu kapalı");
+            tvStatus.setText(R.string.server_stopped);
             btnStart.setEnabled(true);
             btnStop.setEnabled(false);
-            Toast.makeText(this, "FTP Sunucusu durduruldu", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.ftp_stopped),
+                    Toast.LENGTH_SHORT).show();
         }
     }
 
     private void updateUI() {
         if (bound && ftpService != null && ftpService.isRunning()) {
-            tvStatus.setText("▶ Sunucu çalışıyor");
+            tvStatus.setText(R.string.server_running);
             btnStart.setEnabled(false);
             btnStop.setEnabled(true);
         }
