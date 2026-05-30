@@ -20,6 +20,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.SearchView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
@@ -39,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private FileAdapter adapter;
     private File currentDir;
     private SharedPreferences prefs;
+    private List<File> allFiles = new ArrayList<>();
+    private String searchQuery = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +83,61 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+
+        if (searchView != null) {
+            searchView.setQueryHint("Dosya ara...");
+            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                @Override
+                public boolean onQueryTextSubmit(String query) {
+                    searchQuery = query;
+                    filterFiles(query);
+                    return true;
+                }
+
+                @Override
+                public boolean onQueryTextChange(String newText) {
+                    searchQuery = newText;
+                    filterFiles(newText);
+                    return true;
+                }
+            });
+
+            searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
+                @Override
+                public boolean onMenuItemActionExpand(MenuItem item) {
+                    return true;
+                }
+
+                @Override
+                public boolean onMenuItemActionCollapse(MenuItem item) {
+                    searchQuery = "";
+                    if (currentDir != null) loadDir(currentDir);
+                    return true;
+                }
+            });
+        }
+
         return true;
+    }
+
+    private void filterFiles(String query) {
+        if (query.isEmpty()) {
+            adapter.setFiles(allFiles);
+            tvPath.setText(currentDir != null ? currentDir.getAbsolutePath() : "");
+            return;
+        }
+
+        List<File> filtered = new ArrayList<>();
+        for (File f : allFiles) {
+            if (f.getName().toLowerCase().contains(query.toLowerCase())) {
+                filtered.add(f);
+            }
+        }
+        adapter.setFiles(filtered);
+        tvPath.setText("🔍 \"" + query + "\" — " + filtered.size() + " sonuç");
     }
 
     @Override
@@ -97,12 +154,6 @@ public class MainActivity extends AppCompatActivity {
             return true;
         } else if (id == R.id.action_ftp) {
             startActivity(new Intent(this, FtpActivity.class));
-            return true;
-        } else if (id == R.id.action_dark_mode) {
-            boolean isDark = prefs.getBoolean("dark_mode", false);
-            prefs.edit().putBoolean("dark_mode", !isDark).apply();
-            AppCompatDelegate.setDefaultNightMode(!isDark ?
-                    AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
             return true;
         } else if (id == R.id.action_settings) {
             startActivity(new Intent(this, SettingsActivity.class));
@@ -146,21 +197,28 @@ public class MainActivity extends AppCompatActivity {
 
     void loadDir(File dir) {
         currentDir = dir;
-        tvPath.setText(dir.getAbsolutePath());
+        if (searchQuery.isEmpty()) {
+            tvPath.setText(dir.getAbsolutePath());
+        }
         boolean showHidden = prefs.getBoolean("show_hidden", false);
         File[] files = dir.listFiles();
-        List<File> list = new ArrayList<>();
+        allFiles = new ArrayList<>();
         if (files != null) {
             for (File f : files) {
-                if (showHidden || !f.isHidden()) list.add(f);
+                if (showHidden || !f.isHidden()) allFiles.add(f);
             }
         }
-        Collections.sort(list, (a, b) -> {
+        Collections.sort(allFiles, (a, b) -> {
             if (a.isDirectory() && !b.isDirectory()) return -1;
             if (!a.isDirectory() && b.isDirectory()) return 1;
             return a.getName().compareToIgnoreCase(b.getName());
         });
-        adapter.setFiles(list);
+
+        if (!searchQuery.isEmpty()) {
+            filterFiles(searchQuery);
+        } else {
+            adapter.setFiles(allFiles);
+        }
     }
 
     private void openFile(File f) {
