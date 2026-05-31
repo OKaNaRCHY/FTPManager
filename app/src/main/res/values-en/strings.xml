@@ -63,4 +63,13 @@
     <string name="about_desc">File management and FTP connection</string>
     <string name="appearance">Appearance</string>
     <string name="file_manager">File Manager</string>
+    <string name="cut">Cut</string>
+    <string name="copy">Copy</string>
+    <string name="paste">Paste</string>
+    <string name="select_all">Select All</string>
+    <string name="selected">selected</string>
+    <string name="cut_success">Cut</string>
+    <string name="copy_success">Copied</string>
+    <string name="paste_success">Pasted!</string>
+    <string name="paste_error">Cannot paste</string>
 </resources>
