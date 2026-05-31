@@ -30,7 +30,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -50,6 +53,13 @@ public class MainActivity extends AppCompatActivity {
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
 
+    // Clipboard
+    private List<File> clipboard = new ArrayList<>();
+    private boolean clipboardCut = false;
+
+    // Selection action bar
+    private MenuItem pasteMenuItem;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         prefs = getSharedPreferences("FTPManagerPrefs", MODE_PRIVATE);
@@ -64,10 +74,24 @@ public class MainActivity extends AppCompatActivity {
         tvPath = findViewById(R.id.tv_path);
         recycler = findViewById(R.id.recycler);
         recycler.setLayoutManager(new LinearLayoutManager(this));
+
         adapter = new FileAdapter(item -> {
+            if (adapter.isMultiSelectMode()) return;
             if (item.isDirectory()) loadDir(item);
             else openFile(item);
         }, item -> showContextMenu(item));
+
+        adapter.setOnSelectionChanged(count -> {
+            if (getSupportActionBar() != null) {
+                if (count > 0) {
+                    getSupportActionBar().setTitle(count + " " + getString(R.string.selected));
+                } else {
+                    getSupportActionBar().setTitle(R.string.app_name);
+                }
+            }
+            invalidateOptionsMenu();
+        });
+
         recycler.setAdapter(adapter);
         requestPermissions();
     }
@@ -85,6 +109,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        pasteMenuItem = menu.findItem(R.id.action_paste);
+
         MenuItem searchItem = menu.findItem(R.id.action_search);
         SearchView searchView = (SearchView) searchItem.getActionView();
         if (searchView != null) {
@@ -112,9 +138,7 @@ public class MainActivity extends AppCompatActivity {
             });
             searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
                 @Override
-                public boolean onMenuItemActionExpand(MenuItem item) {
-                    return true;
-                }
+                public boolean onMenuItemActionExpand(MenuItem item) { return true; }
                 @Override
                 public boolean onMenuItemActionCollapse(MenuItem item) {
                     cancelSearch();
@@ -129,10 +153,139 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private void scheduleSearch(String query) {
-        if (searchRunnable != null) {
-            mainHandler.removeCallbacks(searchRunnable);
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        boolean hasSelection = adapter.getSelectedCount() > 0;
+        boolean hasClipboard = !clipboard.isEmpty();
+
+        menu.findItem(R.id.action_cut).setVisible(hasSelection);
+        menu.findItem(R.id.action_copy).setVisible(hasSelection);
+        menu.findItem(R.id.action_select_all).setVisible(hasSelection);
+        menu.findItem(R.id.action_paste).setVisible(hasClipboard);
+        menu.findItem(R.id.action_search).setVisible(!hasSelection);
+        menu.findItem(R.id.action_new_file).setVisible(!hasSelection);
+        menu.findItem(R.id.action_new_folder).setVisible(!hasSelection);
+
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_cut) {
+            cutFiles();
+            return true;
+        } else if (id == R.id.action_copy) {
+            copyFiles();
+            return true;
+        } else if (id == R.id.action_paste) {
+            pasteFiles();
+            return true;
+        } else if (id == R.id.action_select_all) {
+            selectAllFiles();
+            return true;
+        } else if (id == R.id.action_new_file) {
+            createNewFile();
+            return true;
+        } else if (id == R.id.action_new_folder) {
+            createFolder();
+            return true;
+        } else if (id == R.id.action_ftp_server) {
+            startActivity(new Intent(this, FtpServerActivity.class));
+            return true;
+        } else if (id == R.id.action_ftp) {
+            startActivity(new Intent(this, FtpActivity.class));
+            return true;
+        } else if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
         }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void cutFiles() {
+        clipboard = adapter.getSelectedFiles();
+        clipboardCut = true;
+        adapter.clearSelection();
+        Toast.makeText(this, clipboard.size() + " " +
+                getString(R.string.cut_success), Toast.LENGTH_SHORT).show();
+        invalidateOptionsMenu();
+    }
+
+    private void copyFiles() {
+        clipboard = adapter.getSelectedFiles();
+        clipboardCut = false;
+        adapter.clearSelection();
+        Toast.makeText(this, clipboard.size() + " " +
+                getString(R.string.copy_success), Toast.LENGTH_SHORT).show();
+        invalidateOptionsMenu();
+    }
+
+    private void pasteFiles() {
+        if (clipboard.isEmpty() || currentDir == null) return;
+        int success = 0;
+        for (File f : clipboard) {
+            try {
+                File dest = new File(currentDir, f.getName());
+                if (clipboardCut) {
+                    if (f.renameTo(dest)) success++;
+                    else if (copyFileOrDir(f, dest)) { deleteRecursive(f); success++; }
+                } else {
+                    if (copyFileOrDir(f, dest)) success++;
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, getString(R.string.paste_error) + ": " + f.getName(),
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+        if (clipboardCut) clipboard.clear();
+        loadDir(currentDir);
+        Toast.makeText(this, success + " " + getString(R.string.paste_success),
+                Toast.LENGTH_SHORT).show();
+        invalidateOptionsMenu();
+    }
+
+    private boolean copyFileOrDir(File src, File dest) {
+        if (src.isDirectory()) {
+            dest.mkdirs();
+            File[] files = src.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (!copyFileOrDir(f, new File(dest, f.getName()))) return false;
+                }
+            }
+            return true;
+        } else {
+            try (FileInputStream in = new FileInputStream(src);
+                 FileOutputStream out = new FileOutputStream(dest)) {
+                byte[] buf = new byte[8192];
+                int len;
+                while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+                return true;
+            } catch (IOException e) {
+                return false;
+            }
+        }
+    }
+
+    private void deleteRecursive(File f) {
+        if (f.isDirectory()) {
+            File[] files = f.listFiles();
+            if (files != null) for (File child : files) deleteRecursive(child);
+        }
+        f.delete();
+    }
+
+    private void selectAllFiles() {
+        // Tüm dosyaları seç — adapter'a yeni metod eklenecek
+        for (int i = 0; i < allFiles.size(); i++) {
+            adapter.selectAll(allFiles);
+        }
+        invalidateOptionsMenu();
+    }
+
+    private void scheduleSearch(String query) {
+        if (searchRunnable != null) mainHandler.removeCallbacks(searchRunnable);
         searchRunnable = () -> searchFilesAsync(query);
         mainHandler.postDelayed(searchRunnable, 300);
     }
@@ -166,35 +319,9 @@ public class MainActivity extends AppCompatActivity {
         File[] files = dir.listFiles();
         if (files == null) return;
         for (File f : files) {
-            if (f.getName().toLowerCase().contains(query)) {
-                results.add(f);
-            }
-            if (f.isDirectory()) {
-                searchRecursive(f, query, results);
-            }
+            if (f.getName().toLowerCase().contains(query)) results.add(f);
+            if (f.isDirectory()) searchRecursive(f, query, results);
         }
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.action_new_file) {
-            createNewFile();
-            return true;
-        } else if (id == R.id.action_new_folder) {
-            createFolder();
-            return true;
-        } else if (id == R.id.action_ftp_server) {
-            startActivity(new Intent(this, FtpServerActivity.class));
-            return true;
-        } else if (id == R.id.action_ftp) {
-            startActivity(new Intent(this, FtpActivity.class));
-            return true;
-        } else if (id == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     private void requestPermissions() {
@@ -232,9 +359,7 @@ public class MainActivity extends AppCompatActivity {
 
     void loadDir(File dir) {
         currentDir = dir;
-        if (searchQuery.isEmpty()) {
-            tvPath.setText(dir.getAbsolutePath());
-        }
+        if (searchQuery.isEmpty()) tvPath.setText(dir.getAbsolutePath());
         boolean showHidden = prefs.getBoolean("show_hidden", false);
         File[] files = dir.listFiles();
         allFiles = new ArrayList<>();
@@ -248,11 +373,8 @@ public class MainActivity extends AppCompatActivity {
             if (!a.isDirectory() && b.isDirectory()) return 1;
             return a.getName().compareToIgnoreCase(b.getName());
         });
-        if (!searchQuery.isEmpty()) {
-            searchFilesAsync(searchQuery);
-        } else {
-            adapter.setFiles(allFiles);
-        }
+        if (!searchQuery.isEmpty()) searchFilesAsync(searchQuery);
+        else adapter.setFiles(allFiles);
     }
 
     private void openFile(File f) {
@@ -299,11 +421,15 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle(f.getName())
                 .setItems(new String[]{
                         getString(R.string.open),
+                        getString(R.string.cut),
+                        getString(R.string.copy),
                         getString(R.string.delete),
                         getString(R.string.rename)
                 }, (d, w) -> {
                     if (w == 0) openFile(f);
-                    else if (w == 1) deleteFile(f);
+                    else if (w == 1) { clipboard = new ArrayList<>(); clipboard.add(f); clipboardCut = true; Toast.makeText(this, getString(R.string.cut_success), Toast.LENGTH_SHORT).show(); invalidateOptionsMenu(); }
+                    else if (w == 2) { clipboard = new ArrayList<>(); clipboard.add(f); clipboardCut = false; Toast.makeText(this, getString(R.string.copy_success), Toast.LENGTH_SHORT).show(); invalidateOptionsMenu(); }
+                    else if (w == 3) deleteFile(f);
                     else renameFile(f);
                 }).show();
     }
@@ -313,8 +439,7 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage("\"" + f.getName() + "\" " + getString(R.string.delete_confirm))
                 .setPositiveButton(R.string.delete, (d, w) -> {
                     if (f.delete()) loadDir(currentDir);
-                    else Toast.makeText(this, getString(R.string.cannot_delete),
-                            Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.cannot_delete), Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel, null).show();
     }
@@ -323,13 +448,11 @@ public class MainActivity extends AppCompatActivity {
         EditText et = new EditText(this);
         et.setText(f.getName());
         new AlertDialog.Builder(this)
-                .setTitle(R.string.rename_title)
-                .setView(et)
+                .setTitle(R.string.rename_title).setView(et)
                 .setPositiveButton(R.string.ok, (d, w) -> {
                     File nf = new File(f.getParent(), et.getText().toString().trim());
                     if (f.renameTo(nf)) loadDir(currentDir);
-                    else Toast.makeText(this, getString(R.string.error),
-                            Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.error), Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel, null).show();
     }
@@ -338,13 +461,11 @@ public class MainActivity extends AppCompatActivity {
         EditText et = new EditText(this);
         et.setHint(R.string.folder_name_hint);
         new AlertDialog.Builder(this)
-                .setTitle(R.string.new_folder_title)
-                .setView(et)
+                .setTitle(R.string.new_folder_title).setView(et)
                 .setPositiveButton(R.string.create, (d, w) -> {
                     File nf = new File(currentDir, et.getText().toString().trim());
                     if (nf.mkdirs()) loadDir(currentDir);
-                    else Toast.makeText(this, getString(R.string.error),
-                            Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.error), Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel, null).show();
     }
@@ -361,46 +482,8 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(etName);
         layout.addView(etContent);
         new AlertDialog.Builder(this)
-                .setTitle(R.string.new_file_title)
-                .setView(layout)
+                .setTitle(R.string.new_file_title).setView(layout)
                 .setPositiveButton(R.string.create, (d, w) -> {
                     String name = etName.getText().toString().trim();
-                    String content = etContent.getText().toString();
                     if (name.isEmpty()) {
-                        Toast.makeText(this, getString(R.string.file_name_empty),
-                                Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    File newFile = new File(currentDir, name);
-                    try {
-                        FileWriter fw = new FileWriter(newFile);
-                        fw.write(content);
-                        fw.close();
-                        loadDir(currentDir);
-                        Toast.makeText(this, getString(R.string.file_created),
-                                Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        Toast.makeText(this, getString(R.string.error) + ": " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton(R.string.cancel, null)
-                .show();
-    }
-
-    @Override
-    public void onBackPressed() {
-        File parent = currentDir != null ? currentDir.getParentFile() : null;
-        if (parent != null && !currentDir.equals(Environment.getExternalStorageDirectory())) {
-            loadDir(parent);
-        } else {
-            super.onBackPressed();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        searchExecutor.shutdown();
-        super.onDestroy();
-    }
-}
+                        Toast.makeText(this,
