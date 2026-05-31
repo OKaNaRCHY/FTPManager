@@ -52,13 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
-
-    // Clipboard
     private List<File> clipboard = new ArrayList<>();
     private boolean clipboardCut = false;
-
-    // Selection action bar
-    private MenuItem pasteMenuItem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,13 +69,11 @@ public class MainActivity extends AppCompatActivity {
         tvPath = findViewById(R.id.tv_path);
         recycler = findViewById(R.id.recycler);
         recycler.setLayoutManager(new LinearLayoutManager(this));
-
         adapter = new FileAdapter(item -> {
             if (adapter.isMultiSelectMode()) return;
             if (item.isDirectory()) loadDir(item);
             else openFile(item);
         }, item -> showContextMenu(item));
-
         adapter.setOnSelectionChanged(count -> {
             if (getSupportActionBar() != null) {
                 if (count > 0) {
@@ -91,7 +84,6 @@ public class MainActivity extends AppCompatActivity {
             }
             invalidateOptionsMenu();
         });
-
         recycler.setAdapter(adapter);
         requestPermissions();
     }
@@ -109,8 +101,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        pasteMenuItem = menu.findItem(R.id.action_paste);
-
         MenuItem searchItem = menu.findItem(R.id.action_search);
         SearchView searchView = (SearchView) searchItem.getActionView();
         if (searchView != null) {
@@ -157,7 +147,6 @@ public class MainActivity extends AppCompatActivity {
     public boolean onPrepareOptionsMenu(Menu menu) {
         boolean hasSelection = adapter.getSelectedCount() > 0;
         boolean hasClipboard = !clipboard.isEmpty();
-
         menu.findItem(R.id.action_cut).setVisible(hasSelection);
         menu.findItem(R.id.action_copy).setVisible(hasSelection);
         menu.findItem(R.id.action_select_all).setVisible(hasSelection);
@@ -165,7 +154,6 @@ public class MainActivity extends AppCompatActivity {
         menu.findItem(R.id.action_search).setVisible(!hasSelection);
         menu.findItem(R.id.action_new_file).setVisible(!hasSelection);
         menu.findItem(R.id.action_new_folder).setVisible(!hasSelection);
-
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -173,32 +161,23 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_cut) {
-            cutFiles();
-            return true;
+            cutFiles(); return true;
         } else if (id == R.id.action_copy) {
-            copyFiles();
-            return true;
+            copyFiles(); return true;
         } else if (id == R.id.action_paste) {
-            pasteFiles();
-            return true;
+            pasteFiles(); return true;
         } else if (id == R.id.action_select_all) {
-            selectAllFiles();
-            return true;
+            adapter.selectAll(allFiles); return true;
         } else if (id == R.id.action_new_file) {
-            createNewFile();
-            return true;
+            createNewFile(); return true;
         } else if (id == R.id.action_new_folder) {
-            createFolder();
-            return true;
+            createFolder(); return true;
         } else if (id == R.id.action_ftp_server) {
-            startActivity(new Intent(this, FtpServerActivity.class));
-            return true;
+            startActivity(new Intent(this, FtpServerActivity.class)); return true;
         } else if (id == R.id.action_ftp) {
-            startActivity(new Intent(this, FtpActivity.class));
-            return true;
+            startActivity(new Intent(this, FtpActivity.class)); return true;
         } else if (id == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
-            return true;
+            startActivity(new Intent(this, SettingsActivity.class)); return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -234,14 +213,14 @@ public class MainActivity extends AppCompatActivity {
                     if (copyFileOrDir(f, dest)) success++;
                 }
             } catch (Exception e) {
-                Toast.makeText(this, getString(R.string.paste_error) + ": " + f.getName(),
-                        Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.paste_error) + ": " +
+                        f.getName(), Toast.LENGTH_SHORT).show();
             }
         }
         if (clipboardCut) clipboard.clear();
         loadDir(currentDir);
-        Toast.makeText(this, success + " " + getString(R.string.paste_success),
-                Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, success + " " +
+                getString(R.string.paste_success), Toast.LENGTH_SHORT).show();
         invalidateOptionsMenu();
     }
 
@@ -274,14 +253,6 @@ public class MainActivity extends AppCompatActivity {
             if (files != null) for (File child : files) deleteRecursive(child);
         }
         f.delete();
-    }
-
-    private void selectAllFiles() {
-        // Tüm dosyaları seç — adapter'a yeni metod eklenecek
-        for (int i = 0; i < allFiles.size(); i++) {
-            adapter.selectAll(allFiles);
-        }
-        invalidateOptionsMenu();
     }
 
     private void scheduleSearch(String query) {
@@ -427,9 +398,21 @@ public class MainActivity extends AppCompatActivity {
                         getString(R.string.rename)
                 }, (d, w) -> {
                     if (w == 0) openFile(f);
-                    else if (w == 1) { clipboard = new ArrayList<>(); clipboard.add(f); clipboardCut = true; Toast.makeText(this, getString(R.string.cut_success), Toast.LENGTH_SHORT).show(); invalidateOptionsMenu(); }
-                    else if (w == 2) { clipboard = new ArrayList<>(); clipboard.add(f); clipboardCut = false; Toast.makeText(this, getString(R.string.copy_success), Toast.LENGTH_SHORT).show(); invalidateOptionsMenu(); }
-                    else if (w == 3) deleteFile(f);
+                    else if (w == 1) {
+                        clipboard = new ArrayList<>();
+                        clipboard.add(f);
+                        clipboardCut = true;
+                        Toast.makeText(this, getString(R.string.cut_success),
+                                Toast.LENGTH_SHORT).show();
+                        invalidateOptionsMenu();
+                    } else if (w == 2) {
+                        clipboard = new ArrayList<>();
+                        clipboard.add(f);
+                        clipboardCut = false;
+                        Toast.makeText(this, getString(R.string.copy_success),
+                                Toast.LENGTH_SHORT).show();
+                        invalidateOptionsMenu();
+                    } else if (w == 3) deleteFile(f);
                     else renameFile(f);
                 }).show();
     }
@@ -439,7 +422,8 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage("\"" + f.getName() + "\" " + getString(R.string.delete_confirm))
                 .setPositiveButton(R.string.delete, (d, w) -> {
                     if (f.delete()) loadDir(currentDir);
-                    else Toast.makeText(this, getString(R.string.cannot_delete), Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.cannot_delete),
+                            Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel, null).show();
     }
@@ -452,7 +436,8 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.ok, (d, w) -> {
                     File nf = new File(f.getParent(), et.getText().toString().trim());
                     if (f.renameTo(nf)) loadDir(currentDir);
-                    else Toast.makeText(this, getString(R.string.error), Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.error),
+                            Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel, null).show();
     }
@@ -465,7 +450,8 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.create, (d, w) -> {
                     File nf = new File(currentDir, et.getText().toString().trim());
                     if (nf.mkdirs()) loadDir(currentDir);
-                    else Toast.makeText(this, getString(R.string.error), Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this, getString(R.string.error),
+                            Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel, null).show();
     }
@@ -486,4 +472,47 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.create, (d, w) -> {
                     String name = etName.getText().toString().trim();
                     if (name.isEmpty()) {
-                        Toast.makeText(this,
+                        Toast.makeText(this, getString(R.string.file_name_empty),
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    File newFile = new File(currentDir, name);
+                    try {
+                        FileWriter fw = new FileWriter(newFile);
+                        fw.write(etContent.getText().toString());
+                        fw.close();
+                        loadDir(currentDir);
+                        Toast.makeText(this, getString(R.string.file_created),
+                                Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, getString(R.string.error) + ": " +
+                                e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(R.string.cancel, null).show();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (adapter.isMultiSelectMode()) {
+            adapter.clearSelection();
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setTitle(R.string.app_name);
+            }
+            invalidateOptionsMenu();
+            return;
+        }
+        File parent = currentDir != null ? currentDir.getParentFile() : null;
+        if (parent != null && !currentDir.equals(Environment.getExternalStorageDirectory())) {
+            loadDir(parent);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        searchExecutor.shutdown();
+        super.onDestroy();
+    }
+}
