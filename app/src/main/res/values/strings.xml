@@ -63,4 +63,13 @@
     <string name="about_desc">Dosya yönetimi ve FTP bağlantısı</string>
     <string name="appearance">Görünüm</string>
     <string name="file_manager">Dosya Yöneticisi</string>
+    <string name="cut">Kes</string>
+    <string name="copy">Kopyala</string>
+    <string name="paste">Yapıştır</string>
+    <string name="select_all">Tümünü Seç</string>
+    <string name="selected">seçildi</string>
+    <string name="cut_success">Kesildi</string>
+    <string name="copy_success">Kopyalandı</string>
+    <string name="paste_success">Yapıştırıldı!</string>
+    <string name="paste_error">Yapıştırılamadı</string>
 </resources>
