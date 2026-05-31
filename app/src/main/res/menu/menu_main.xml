@@ -10,6 +10,30 @@
         app:actionViewClass="androidx.appcompat.widget.SearchView"/>
 
     <item
+        android:id="@+id/action_cut"
+        android:title="@string/cut"
+        app:showAsAction="never"
+        android:visible="false"/>
+
+    <item
+        android:id="@+id/action_copy"
+        android:title="@string/copy"
+        app:showAsAction="never"
+        android:visible="false"/>
+
+    <item
+        android:id="@+id/action_paste"
+        android:title="@string/paste"
+        app:showAsAction="never"
+        android:visible="false"/>
+
+    <item
+        android:id="@+id/action_select_all"
+        android:title="@string/select_all"
+        app:showAsAction="never"
+        android:visible="false"/>
+
+    <item
         android:id="@+id/action_new_file"
         android:title="@string/new_file"
         app:showAsAction="never"/>
