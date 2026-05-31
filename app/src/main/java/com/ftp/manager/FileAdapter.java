@@ -56,6 +56,18 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         if (onSelectionChanged != null) onSelectionChanged.onSelectionChanged(0);
     }
 
+    public void selectAll(List<File> allFiles) {
+        selectedPositions.clear();
+        multiSelectMode = true;
+        for (int i = 0; i < files.size(); i++) {
+            selectedPositions.add(i);
+        }
+        notifyDataSetChanged();
+        if (onSelectionChanged != null) {
+            onSelectionChanged.onSelectionChanged(selectedPositions.size());
+        }
+    }
+
     public boolean isMultiSelectMode() {
         return multiSelectMode;
     }
@@ -90,7 +102,6 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.info.setText(size);
         }
 
-        // Seçili görünüm
         if (selectedPositions.contains(pos)) {
             h.itemView.setBackgroundColor(0x331565C0);
         } else {
@@ -99,6 +110,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
 
         h.itemView.setOnClickListener(v -> {
             int p = h.getAdapterPosition();
+            if (p == RecyclerView.NO_ID) return;
             if (multiSelectMode) {
                 toggleSelection(p);
             } else {
@@ -108,6 +120,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
 
         h.itemView.setOnLongClickListener(v -> {
             int p = h.getAdapterPosition();
+            if (p == RecyclerView.NO_ID) return false;
             if (!multiSelectMode) {
                 multiSelectMode = true;
                 toggleSelection(p);
