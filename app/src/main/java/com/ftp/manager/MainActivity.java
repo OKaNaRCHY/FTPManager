@@ -69,11 +69,16 @@ public class MainActivity extends AppCompatActivity {
         tvPath = findViewById(R.id.tv_path);
         recycler = findViewById(R.id.recycler);
         recycler.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new FileAdapter(item -> {
-            if (adapter.isMultiSelectMode()) return;
-            if (item.isDirectory()) loadDir(item);
-            else openFile(item);
-        }, item -> showContextMenu(item));
+
+        adapter = new FileAdapter(
+            item -> {
+                if (adapter.isMultiSelectMode()) return;
+                if (item.isDirectory()) loadDir(item);
+                else openFile(item);
+            },
+            item -> showContextMenu(item)
+        );
+
         adapter.setOnSelectionChanged(count -> {
             if (getSupportActionBar() != null) {
                 if (count > 0) {
@@ -84,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
             }
             invalidateOptionsMenu();
         });
+
         recycler.setAdapter(adapter);
         requestPermissions();
     }
