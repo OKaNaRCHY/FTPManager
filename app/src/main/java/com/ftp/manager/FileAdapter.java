@@ -102,6 +102,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.info.setText(size);
         }
 
+        // Seçili görünüm
         if (selectedPositions.contains(pos)) {
             h.itemView.setBackgroundColor(0x331565C0);
         } else {
@@ -122,10 +123,11 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             int p = h.getAdapterPosition();
             if (p == RecyclerView.NO_ID) return false;
             if (!multiSelectMode) {
-                multiSelectMode = true;
-                toggleSelection(p);
-            } else {
+                // Uzun basınca context menü aç
                 onLongClick.onClick(files.get(p));
+            } else {
+                // Çoklu seçim modunda uzun basınca seçimi değiştir
+                toggleSelection(p);
             }
             return true;
         });
