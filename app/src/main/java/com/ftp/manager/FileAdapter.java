@@ -21,14 +21,13 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
     interface OnSelectionChanged { void onSelectionChanged(int count); }
 
     private List<File> files = new ArrayList<>();
-    private final OnClick onClick, onLongClick;
+    private final OnClick onClick;
     private OnSelectionChanged onSelectionChanged;
     private Set<Integer> selectedPositions = new HashSet<>();
     private boolean multiSelectMode = false;
 
-    public FileAdapter(OnClick onClick, OnClick onLongClick) {
+    public FileAdapter(OnClick onClick) {
         this.onClick = onClick;
-        this.onLongClick = onLongClick;
     }
 
     public void setOnSelectionChanged(OnSelectionChanged listener) {
@@ -105,8 +104,10 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         // Seçili görünüm
         if (selectedPositions.contains(pos)) {
             h.itemView.setBackgroundColor(0x331565C0);
+            h.icon.setText("✅");
         } else {
             h.itemView.setBackgroundColor(0x00000000);
+            h.icon.setText(f.isDirectory() ? "📁" : getIcon(f.getName()));
         }
 
         h.itemView.setOnClickListener(v -> {
@@ -122,13 +123,8 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         h.itemView.setOnLongClickListener(v -> {
             int p = h.getAdapterPosition();
             if (p == RecyclerView.NO_ID) return false;
-            if (!multiSelectMode) {
-                // Uzun basınca context menü aç
-                onLongClick.onClick(files.get(p));
-            } else {
-                // Çoklu seçim modunda uzun basınca seçimi değiştir
-                toggleSelection(p);
-            }
+            multiSelectMode = true;
+            toggleSelection(p);
             return true;
         });
     }
