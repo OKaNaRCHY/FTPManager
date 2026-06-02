@@ -70,14 +70,11 @@ public class MainActivity extends AppCompatActivity {
         recycler = findViewById(R.id.recycler);
         recycler.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new FileAdapter(
-            item -> {
-                if (adapter.isMultiSelectMode()) return;
-                if (item.isDirectory()) loadDir(item);
-                else openFile(item);
-            },
-            item -> showContextMenu(item)
-        );
+        adapter = new FileAdapter(item -> {
+            if (adapter.isMultiSelectMode()) return;
+            if (item.isDirectory()) loadDir(item);
+            else openFile(item);
+        });
 
         adapter.setOnSelectionChanged(count -> {
             if (getSupportActionBar() != null) {
@@ -156,10 +153,14 @@ public class MainActivity extends AppCompatActivity {
         menu.findItem(R.id.action_cut).setVisible(hasSelection);
         menu.findItem(R.id.action_copy).setVisible(hasSelection);
         menu.findItem(R.id.action_select_all).setVisible(hasSelection);
-        menu.findItem(R.id.action_paste).setVisible(hasClipboard);
+        menu.findItem(R.id.action_delete).setVisible(hasSelection);
+        menu.findItem(R.id.action_paste).setVisible(hasClipboard && !hasSelection);
         menu.findItem(R.id.action_search).setVisible(!hasSelection);
         menu.findItem(R.id.action_new_file).setVisible(!hasSelection);
         menu.findItem(R.id.action_new_folder).setVisible(!hasSelection);
+        menu.findItem(R.id.action_ftp_server).setVisible(!hasSelection);
+        menu.findItem(R.id.action_ftp).setVisible(!hasSelection);
+        menu.findItem(R.id.action_settings).setVisible(!hasSelection);
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -174,6 +175,8 @@ public class MainActivity extends AppCompatActivity {
             pasteFiles(); return true;
         } else if (id == R.id.action_select_all) {
             adapter.selectAll(allFiles); return true;
+        } else if (id == R.id.action_delete) {
+            deleteSelectedFiles(); return true;
         } else if (id == R.id.action_new_file) {
             createNewFile(); return true;
         } else if (id == R.id.action_new_folder) {
@@ -228,6 +231,19 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, success + " " +
                 getString(R.string.paste_success), Toast.LENGTH_SHORT).show();
         invalidateOptionsMenu();
+    }
+
+    private void deleteSelectedFiles() {
+        List<File> selected = adapter.getSelectedFiles();
+        if (selected.isEmpty()) return;
+        new AlertDialog.Builder(this)
+                .setMessage(selected.size() + " " + getString(R.string.delete_confirm))
+                .setPositiveButton(R.string.delete, (d, w) -> {
+                    for (File f : selected) deleteRecursive(f);
+                    adapter.clearSelection();
+                    loadDir(currentDir);
+                })
+                .setNegativeButton(R.string.cancel, null).show();
     }
 
     private boolean copyFileOrDir(File src, File dest) {
