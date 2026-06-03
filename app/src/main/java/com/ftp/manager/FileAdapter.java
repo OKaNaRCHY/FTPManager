@@ -86,10 +86,18 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
     @Override
     public void onBindViewHolder(@NonNull VH h, int pos) {
         File f = files.get(pos);
-        h.icon.setText(f.isDirectory() ? "📁" : getIcon(f.getName()));
+        boolean selected = selectedPositions.contains(pos);
+
+        // İkon
+        if (selected) {
+            h.icon.setText("✅");
+        } else {
+            h.icon.setText(f.isDirectory() ? "📁" : getIcon(f.getName()));
+        }
         h.icon.setTextSize(28);
         h.name.setText(f.getName());
 
+        // Bilgi
         if (f.isDirectory()) {
             h.info.setText(R.string.folder);
         } else {
@@ -101,14 +109,8 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.info.setText(size);
         }
 
-        // Seçili görünüm
-        if (selectedPositions.contains(pos)) {
-            h.itemView.setBackgroundColor(0x331565C0);
-            h.icon.setText("✅");
-        } else {
-            h.itemView.setBackgroundColor(0x00000000);
-            h.icon.setText(f.isDirectory() ? "📁" : getIcon(f.getName()));
-        }
+        // Seçili arka plan
+        h.itemView.setBackgroundColor(selected ? 0x331565C0 : 0x00000000);
 
         h.itemView.setOnClickListener(v -> {
             int p = h.getAdapterPosition();
@@ -123,8 +125,13 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         h.itemView.setOnLongClickListener(v -> {
             int p = h.getAdapterPosition();
             if (p == RecyclerView.NO_ID) return false;
+            // Seçim modunu başlat ve bu öğeyi seç
             multiSelectMode = true;
-            toggleSelection(p);
+            selectedPositions.add(p);
+            notifyDataSetChanged();
+            if (onSelectionChanged != null) {
+                onSelectionChanged.onSelectionChanged(selectedPositions.size());
+            }
             return true;
         });
     }
