@@ -130,15 +130,10 @@ public class FtpActivity extends AppCompatActivity {
                 currentPath = path;
                 runOnUiThread(() -> {
                     tvStatus.setText("📂 " + path);
-                    FileAdapter adapter = new FileAdapter(
-                        f -> {
-                            if (f.isDirectory()) listFiles(f.getAbsolutePath());
-                            else Toast.makeText(this, f.getName(),
-                                    Toast.LENGTH_SHORT).show();
-                        },
-                        f -> Toast.makeText(this, f.getName(),
-                                Toast.LENGTH_SHORT).show()
-                    );
+                    FileAdapter adapter = new FileAdapter(f -> {
+                        if (f.isDirectory()) listFiles(f.getAbsolutePath());
+                        else Toast.makeText(this, f.getName(), Toast.LENGTH_SHORT).show();
+                    });
                     adapter.setFiles(list);
                     recycler.setAdapter(adapter);
                 });
