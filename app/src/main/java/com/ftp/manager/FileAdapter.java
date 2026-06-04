@@ -1,6 +1,8 @@
 package com.ftp.manager;
 
+import android.os.Handler;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -25,6 +27,8 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
     private OnSelectionChanged onSelectionChanged;
     private Set<Integer> selectedPositions = new HashSet<>();
     private boolean multiSelectMode = false;
+
+    private static final int LONG_PRESS_TIMEOUT = 500;
 
     public FileAdapter(OnClick onClick) {
         this.onClick = onClick;
@@ -67,13 +71,8 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         }
     }
 
-    public boolean isMultiSelectMode() {
-        return multiSelectMode;
-    }
-
-    public int getSelectedCount() {
-        return selectedPositions.size();
-    }
+    public boolean isMultiSelectMode() { return multiSelectMode; }
+    public int getSelectedCount() { return selectedPositions.size(); }
 
     @NonNull
     @Override
@@ -88,16 +87,10 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         File f = files.get(pos);
         boolean selected = selectedPositions.contains(pos);
 
-        // İkon
-        if (selected) {
-            h.icon.setText("✅");
-        } else {
-            h.icon.setText(f.isDirectory() ? "📁" : getIcon(f.getName()));
-        }
+        h.icon.setText(selected ? "✅" : (f.isDirectory() ? "📁" : getIcon(f.getName())));
         h.icon.setTextSize(28);
         h.name.setText(f.getName());
 
-        // Bilgi
         if (f.isDirectory()) {
             h.info.setText(R.string.folder);
         } else {
@@ -109,8 +102,40 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.info.setText(size);
         }
 
-        // Seçili arka plan
         h.itemView.setBackgroundColor(selected ? 0x331565C0 : 0x00000000);
+        h.itemView.setLongClickable(true);
+
+        // Manuel long press — Handler ile
+        Handler handler = new Handler();
+        Runnable longPressRunnable = () -> {
+            int p = h.getAdapterPosition();
+            if (p == RecyclerView.NO_ID) return;
+            multiSelectMode = true;
+            selectedPositions.add(p);
+            notifyDataSetChanged();
+            if (onSelectionChanged != null) {
+                onSelectionChanged.onSelectionChanged(selectedPositions.size());
+            }
+        };
+
+        h.itemView.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    handler.postDelayed(longPressRunnable, LONG_PRESS_TIMEOUT);
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    handler.removeCallbacks(longPressRunnable);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    // Hareket edince long press'i iptal et
+                    if (Math.abs(event.getX()) > 10 || Math.abs(event.getY()) > 10) {
+                        handler.removeCallbacks(longPressRunnable);
+                    }
+                    break;
+            }
+            return false;
+        });
 
         h.itemView.setOnClickListener(v -> {
             int p = h.getAdapterPosition();
@@ -125,7 +150,6 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         h.itemView.setOnLongClickListener(v -> {
             int p = h.getAdapterPosition();
             if (p == RecyclerView.NO_ID) return false;
-            // Seçim modunu başlat ve bu öğeyi seç
             multiSelectMode = true;
             selectedPositions.add(p);
             notifyDataSetChanged();
