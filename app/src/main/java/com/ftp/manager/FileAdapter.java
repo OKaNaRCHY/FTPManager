@@ -1,10 +1,9 @@
 package com.ftp.manager;
 
-import android.os.Handler;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -27,8 +26,6 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
     private OnSelectionChanged onSelectionChanged;
     private Set<Integer> selectedPositions = new HashSet<>();
     private boolean multiSelectMode = false;
-
-    private static final int LONG_PRESS_TIMEOUT = 500;
 
     public FileAdapter(OnClick onClick) {
         this.onClick = onClick;
@@ -71,6 +68,14 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         }
     }
 
+    public void enterMultiSelectMode() {
+        multiSelectMode = true;
+        notifyDataSetChanged();
+        if (onSelectionChanged != null) {
+            onSelectionChanged.onSelectionChanged(0);
+        }
+    }
+
     public boolean isMultiSelectMode() { return multiSelectMode; }
     public int getSelectedCount() { return selectedPositions.size(); }
 
@@ -87,7 +92,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         File f = files.get(pos);
         boolean selected = selectedPositions.contains(pos);
 
-        h.icon.setText(selected ? "✅" : (f.isDirectory() ? "📁" : getIcon(f.getName())));
+        h.icon.setText(f.isDirectory() ? "📁" : getIcon(f.getName()));
         h.icon.setTextSize(28);
         h.name.setText(f.getName());
 
@@ -102,40 +107,15 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.info.setText(size);
         }
 
-        h.itemView.setBackgroundColor(selected ? 0x331565C0 : 0x00000000);
-        h.itemView.setLongClickable(true);
-
-        // Manuel long press — Handler ile
-        Handler handler = new Handler();
-        Runnable longPressRunnable = () -> {
-            int p = h.getAdapterPosition();
-            if (p == RecyclerView.NO_ID) return;
-            multiSelectMode = true;
-            selectedPositions.add(p);
-            notifyDataSetChanged();
-            if (onSelectionChanged != null) {
-                onSelectionChanged.onSelectionChanged(selectedPositions.size());
-            }
-        };
-
-        h.itemView.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    handler.postDelayed(longPressRunnable, LONG_PRESS_TIMEOUT);
-                    break;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    handler.removeCallbacks(longPressRunnable);
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    // Hareket edince long press'i iptal et
-                    if (Math.abs(event.getX()) > 10 || Math.abs(event.getY()) > 10) {
-                        handler.removeCallbacks(longPressRunnable);
-                    }
-                    break;
-            }
-            return false;
-        });
+        // Checkbox göster/gizle
+        if (multiSelectMode) {
+            h.checkbox.setVisibility(View.VISIBLE);
+            h.checkbox.setChecked(selected);
+            h.itemView.setBackgroundColor(selected ? 0x331565C0 : 0x00000000);
+        } else {
+            h.checkbox.setVisibility(View.GONE);
+            h.itemView.setBackgroundColor(0x00000000);
+        }
 
         h.itemView.setOnClickListener(v -> {
             int p = h.getAdapterPosition();
@@ -150,12 +130,12 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         h.itemView.setOnLongClickListener(v -> {
             int p = h.getAdapterPosition();
             if (p == RecyclerView.NO_ID) return false;
-            multiSelectMode = true;
-            selectedPositions.add(p);
-            notifyDataSetChanged();
-            if (onSelectionChanged != null) {
-                onSelectionChanged.onSelectionChanged(selectedPositions.size());
+            if (!multiSelectMode) {
+                multiSelectMode = true;
+                notifyDataSetChanged();
+                if (onSelectionChanged != null) onSelectionChanged.onSelectionChanged(0);
             }
+            toggleSelection(p);
             return true;
         });
     }
@@ -208,11 +188,13 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
 
     static class VH extends RecyclerView.ViewHolder {
         TextView icon, name, info;
+        CheckBox checkbox;
         VH(View v) {
             super(v);
             icon = v.findViewById(R.id.tv_icon);
             name = v.findViewById(R.id.tv_name);
             info = v.findViewById(R.id.tv_info);
+            checkbox = v.findViewById(R.id.checkbox);
         }
     }
 }
