@@ -9,6 +9,11 @@
         app:showAsAction="always"
         app:actionViewClass="androidx.appcompat.widget.SearchView"/>
 
+<item
+    android:id="@+id/action_select"
+    android:title="@string/select"
+    app:showAsAction="never"/>
+    
     <item
         android:id="@+id/action_cut"
         android:title="@string/cut"
