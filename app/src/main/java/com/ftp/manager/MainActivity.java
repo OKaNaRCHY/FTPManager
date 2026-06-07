@@ -149,25 +149,32 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         boolean hasSelection = adapter.getSelectedCount() > 0;
+        boolean isMultiSelect = adapter.isMultiSelectMode();
         boolean hasClipboard = !clipboard.isEmpty();
+
         menu.findItem(R.id.action_cut).setVisible(hasSelection);
         menu.findItem(R.id.action_copy).setVisible(hasSelection);
-        menu.findItem(R.id.action_select_all).setVisible(hasSelection);
+        menu.findItem(R.id.action_select_all).setVisible(isMultiSelect);
         menu.findItem(R.id.action_delete).setVisible(hasSelection);
-        menu.findItem(R.id.action_paste).setVisible(hasClipboard && !hasSelection);
-        menu.findItem(R.id.action_search).setVisible(!hasSelection);
-        menu.findItem(R.id.action_new_file).setVisible(!hasSelection);
-        menu.findItem(R.id.action_new_folder).setVisible(!hasSelection);
-        menu.findItem(R.id.action_ftp_server).setVisible(!hasSelection);
-        menu.findItem(R.id.action_ftp).setVisible(!hasSelection);
-        menu.findItem(R.id.action_settings).setVisible(!hasSelection);
+        menu.findItem(R.id.action_paste).setVisible(hasClipboard && !isMultiSelect);
+        menu.findItem(R.id.action_search).setVisible(!isMultiSelect);
+        menu.findItem(R.id.action_select).setVisible(!isMultiSelect);
+        menu.findItem(R.id.action_new_file).setVisible(!isMultiSelect);
+        menu.findItem(R.id.action_new_folder).setVisible(!isMultiSelect);
+        menu.findItem(R.id.action_ftp_server).setVisible(!isMultiSelect);
+        menu.findItem(R.id.action_ftp).setVisible(!isMultiSelect);
+        menu.findItem(R.id.action_settings).setVisible(!isMultiSelect);
         return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_cut) {
+        if (id == R.id.action_select) {
+            adapter.enterMultiSelectMode();
+            invalidateOptionsMenu();
+            return true;
+        } else if (id == R.id.action_cut) {
             cutFiles(); return true;
         } else if (id == R.id.action_copy) {
             copyFiles(); return true;
