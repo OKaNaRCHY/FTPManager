@@ -76,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
             else openFile(item);
         });
 
-        // Uzun basma: context menü aç
         adapter.setOnLongClick(item -> showContextMenu(item));
 
         adapter.setOnSelectionChanged(count -> {
@@ -172,6 +171,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        // DEBUG: hangi item tıklandığını göster
+        Toast.makeText(this, "Tıklandı: " + item.getTitle(), Toast.LENGTH_SHORT).show();
+
         int id = item.getItemId();
         if (id == R.id.action_select) {
             adapter.enterMultiSelectMode();
