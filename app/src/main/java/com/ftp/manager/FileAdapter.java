@@ -21,16 +21,22 @@ import java.util.Set;
 public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
 
     interface OnClick { void onClick(File f); }
+    interface OnLongClick { void onLongClick(File f); }
     interface OnSelectionChanged { void onSelectionChanged(int count); }
 
     private List<File> files = new ArrayList<>();
     private final OnClick onClick;
+    private OnLongClick onLongClick;
     private OnSelectionChanged onSelectionChanged;
     private Set<Integer> selectedPositions = new HashSet<>();
     private boolean multiSelectMode = false;
 
     public FileAdapter(OnClick onClick) {
         this.onClick = onClick;
+    }
+
+    public void setOnLongClick(OnLongClick listener) {
+        this.onLongClick = listener;
     }
 
     public void setOnSelectionChanged(OnSelectionChanged listener) {
@@ -109,7 +115,6 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.info.setText(size);
         }
 
-        // Checkbox göster/gizle
         if (multiSelectMode) {
             h.checkbox.setVisibility(View.VISIBLE);
             h.checkbox.setChecked(selected);
@@ -131,13 +136,13 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
                     isLongPress[0] = false;
                     longPressHandler.postDelayed(() -> {
                         isLongPress[0] = true;
-                        if (!multiSelectMode) {
-                            multiSelectMode = true;
-                            notifyDataSetChanged();
-                            if (onSelectionChanged != null)
-                                onSelectionChanged.onSelectionChanged(0);
+                        if (multiSelectMode) {
+                            // Çoklu seçim modunda: seç/kaldır
+                            toggleSelection(p);
+                        } else {
+                            // Normal modda: context menü aç
+                            if (onLongClick != null) onLongClick.onLongClick(files.get(p));
                         }
-                        toggleSelection(p);
                     }, 500);
                     break;
                 case MotionEvent.ACTION_UP:
