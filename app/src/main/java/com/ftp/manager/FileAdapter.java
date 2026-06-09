@@ -1,6 +1,8 @@
 package com.ftp.manager;
 
+import android.os.Handler;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
@@ -117,9 +119,47 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.itemView.setBackgroundColor(0x00000000);
         }
 
+        // MIUI'de onLongClickListener çalışmadığı için manuel uzun basma algılama
+        Handler longPressHandler = new Handler();
+        final boolean[] isLongPress = {false};
+        final Runnable[] longPressRunnable = {null};
+
+        h.itemView.setOnTouchListener((v, event) -> {
+            int p = h.getAdapterPosition();
+            if (p == RecyclerView.NO_ID) return false;
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    isLongPress[0] = false;
+                    longPressRunnable[0] = () -> {
+                        isLongPress[0] = true;
+                        // Uzun basma: çoklu seçim moduna gir
+                        if (!multiSelectMode) {
+                            multiSelectMode = true;
+                            notifyDataSetChanged();
+                            if (onSelectionChanged != null) onSelectionChanged.onSelectionChanged(0);
+                        }
+                        toggleSelection(p);
+                    };
+                    longPressHandler.postDelayed(longPressRunnable[0], 500);
+                    return false; // false = normal click olayları da çalışsın
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    longPressHandler.removeCallbacks(longPressRunnable[0]);
+                    return false;
+
+                case MotionEvent.ACTION_MOVE:
+                    longPressHandler.removeCallbacks(longPressRunnable[0]);
+                    return false;
+            }
+            return false;
+        });
+
         h.itemView.setOnClickListener(v -> {
             int p = h.getAdapterPosition();
             if (p == RecyclerView.NO_ID) return;
+            if (isLongPress[0]) return; // Uzun basma olduysa click'i yoksay
             if (multiSelectMode) {
                 toggleSelection(p);
             } else {
@@ -127,17 +167,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             }
         });
 
-        h.itemView.setOnLongClickListener(v -> {
-            int p = h.getAdapterPosition();
-            if (p == RecyclerView.NO_ID) return false;
-            if (!multiSelectMode) {
-                multiSelectMode = true;
-                notifyDataSetChanged();
-                if (onSelectionChanged != null) onSelectionChanged.onSelectionChanged(0);
-            }
-            toggleSelection(p);
-            return true;
-        });
+        // setOnLongClickListener kaldırıldı (MIUI'de çalışmıyor)
     }
 
     private void toggleSelection(int pos) {
