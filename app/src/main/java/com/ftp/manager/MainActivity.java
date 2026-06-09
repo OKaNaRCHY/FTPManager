@@ -76,6 +76,9 @@ public class MainActivity extends AppCompatActivity {
             else openFile(item);
         });
 
+        // Uzun basma: context menü aç
+        adapter.setOnLongClick(item -> showContextMenu(item));
+
         adapter.setOnSelectionChanged(count -> {
             if (getSupportActionBar() != null) {
                 if (count > 0) {
