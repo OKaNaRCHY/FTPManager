@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
 
         adapter.setOnSelectionChanged(count -> {
             if (getSupportActionBar() != null) {
-                if (count > 0) {
+                if (adapter.isMultiSelectMode()) {
                     getSupportActionBar().setTitle(count + " " + getString(R.string.selected));
                 } else {
                     getSupportActionBar().setTitle(R.string.app_name);
@@ -171,12 +171,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        // DEBUG: hangi item tıklandığını göster
-        Toast.makeText(this, "Tıklandı: " + item.getTitle(), Toast.LENGTH_SHORT).show();
-
         int id = item.getItemId();
         if (id == R.id.action_select) {
             adapter.enterMultiSelectMode();
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setTitle("0 " + getString(R.string.selected));
+            }
             invalidateOptionsMenu();
             return true;
         } else if (id == R.id.action_cut) {
