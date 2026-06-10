@@ -1,8 +1,6 @@
 package com.ftp.manager;
 
-import android.os.Handler;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
@@ -21,22 +19,16 @@ import java.util.Set;
 public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
 
     interface OnClick { void onClick(File f); }
-    interface OnLongClick { void onLongClick(File f); }
     interface OnSelectionChanged { void onSelectionChanged(int count); }
 
     private List<File> files = new ArrayList<>();
     private final OnClick onClick;
-    private OnLongClick onLongClick;
     private OnSelectionChanged onSelectionChanged;
     private Set<Integer> selectedPositions = new HashSet<>();
     private boolean multiSelectMode = false;
 
     public FileAdapter(OnClick onClick) {
         this.onClick = onClick;
-    }
-
-    public void setOnLongClick(OnLongClick listener) {
-        this.onLongClick = listener;
     }
 
     public void setOnSelectionChanged(OnSelectionChanged listener) {
@@ -80,7 +72,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         multiSelectMode = true;
         notifyDataSetChanged();
         if (onSelectionChanged != null) {
-            onSelectionChanged.onSelectionChanged(0);
+            onSelectionChanged.onSelectionChanged(-1);
         }
     }
 
@@ -124,42 +116,25 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
             h.itemView.setBackgroundColor(0x00000000);
         }
 
-        Handler longPressHandler = new Handler();
-        final boolean[] isLongPress = {false};
+        h.itemView.setOnClickListener(v -> {
+            int p = h.getAdapterPosition();
+            if (p == RecyclerView.NO_ID) return;
+            if (multiSelectMode) {
+                toggleSelection(p);
+            } else {
+                onClick.onClick(files.get(p));
+            }
+        });
 
-        h.itemView.setOnTouchListener((v, event) -> {
+        h.itemView.setOnLongClickListener(v -> {
             int p = h.getAdapterPosition();
             if (p == RecyclerView.NO_ID) return false;
-
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    isLongPress[0] = false;
-                    longPressHandler.postDelayed(() -> {
-                        isLongPress[0] = true;
-                        if (multiSelectMode) {
-                            // Çoklu seçim modunda: seç/kaldır
-                            toggleSelection(p);
-                        } else {
-                            // Normal modda: context menü aç
-                            if (onLongClick != null) onLongClick.onLongClick(files.get(p));
-                        }
-                    }, 500);
-                    break;
-                case MotionEvent.ACTION_UP:
-                    longPressHandler.removeCallbacksAndMessages(null);
-                    if (!isLongPress[0]) {
-                        if (multiSelectMode) {
-                            toggleSelection(p);
-                        } else {
-                            onClick.onClick(files.get(p));
-                        }
-                    }
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                case MotionEvent.ACTION_CANCEL:
-                    longPressHandler.removeCallbacksAndMessages(null);
-                    break;
+            if (!multiSelectMode) {
+                multiSelectMode = true;
+                notifyDataSetChanged();
+                if (onSelectionChanged != null) onSelectionChanged.onSelectionChanged(-1);
             }
+            toggleSelection(p);
             return true;
         });
     }
@@ -170,7 +145,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.VH> {
         } else {
             selectedPositions.add(pos);
         }
-        if (selectedPositions.isEmpty()) multiSelectMode = false;
+        if (selectedPositions.isEmpty() && !multiSelectMode) multiSelectMode = false;
         notifyItemChanged(pos);
         if (onSelectionChanged != null) {
             onSelectionChanged.onSelectionChanged(selectedPositions.size());
