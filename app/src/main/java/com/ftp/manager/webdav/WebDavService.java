@@ -1,4 +1,3 @@
-
 package com.ftp.manager.webdav;
 
 import android.app.Notification;
@@ -27,6 +26,15 @@ public class WebDavService extends Service {
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, buildNotification("WebDAV başlatılıyor..."));
         startServer();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && "STOP_WEBDAV".equals(intent.getAction())) {
+            stopSelf(); // Bildirimdeki "Durdur" butonuna basıldığında servisi kapatır
+            return START_NOT_STICKY;
+        }
+        return START_STICKY;
     }
 
     private void startServer() {
