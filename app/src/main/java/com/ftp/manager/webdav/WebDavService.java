@@ -1,98 +1,64 @@
 package com.ftp.manager.webdav;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.Service;
 import android.content.Intent;
-import android.os.Build;
-import android.os.Environment;
-import android.os.IBinder;
-import android.util.Log;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.TextView;
 
-import androidx.core.app.NotificationCompat;
+import androidx.appcompat.app.AppCompatActivity;
 
-import java.io.File;
+import com.ftp.manager.R;
 
-public class WebDavService extends Service {
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Collections;
+import java.util.List;
 
-    private static final String CHANNEL_ID = "webdav_channel";
-    private static final int NOTIFICATION_ID = 1001;
-    private WebDavServer server;
+public class WebDavActivity extends AppCompatActivity {
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        createNotificationChannel();
-        startForeground(NOTIFICATION_ID, buildNotification("WebDAV başlatılıyor..."));
-        startServer();
-    }
+    private TextView statusText;
+    private Button startButton;
+    private Button stopButton;
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && "STOP_WEBDAV".equals(intent.getAction())) {
-            stopSelf(); // Bildirimdeki "Durdur" butonuna basıldığında servisi kapatır
-            return START_NOT_STICKY;
-        }
-        return START_STICKY;
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_webdav);
+
+        statusText = findViewById(R.id.webdav_status);
+        startButton = findViewById(R.id.webdav_start);
+        stopButton = findViewById(R.id.webdav_stop);
+
+        startButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, WebDavService.class);
+            startService(intent);
+            statusText.setText("WebDAV çalışıyor: http://" + getLocalIpAddress() + ":8080");
+        });
+
+        stopButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, WebDavService.class);
+            stopService(intent);
+            statusText.setText("WebDAV durduruldu");
+        });
     }
 
-    private void startServer() {
+    /**
+     * Cihazın yerel IP adresini döndürür
+     */
+    private String getLocalIpAddress() {
         try {
-            File root = Environment.getExternalStorageDirectory();
-            server = new WebDavServer(8080, root, "admin", "1234");
-            server.start();
-            Log.i("WebDavService", "WebDAV Server started on port 8080");
-            updateNotification("WebDAV çalışıyor: http://localhost:8080");
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface intf : interfaces) {
+                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                for (InetAddress addr : addrs) {
+                    if (!addr.isLoopbackAddress() && addr.isSiteLocalAddress()) {
+                        return addr.getHostAddress();
+                    }
+                }
+            }
         } catch (Exception e) {
-            Log.e("WebDavService", "Server start error: " + e.getMessage());
-            updateNotification("WebDAV başlatılamadı!");
+            e.printStackTrace();
         }
-    }
-
-    private void stopServer() {
-        if (server != null) {
-            server.stop();
-            Log.i("WebDavService", "WebDAV Server stopped");
-        }
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "WebDAV Server",
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) manager.createNotificationChannel(channel);
-        }
-    }
-
-    private Notification buildNotification(String text) {
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("WebDAV Server")
-                .setContentText(text)
-                .setSmallIcon(android.R.drawable.stat_sys_upload)
-                .setOngoing(true)
-                .build();
-    }
-
-    private void updateNotification(String text) {
-        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (manager != null) {
-            manager.notify(NOTIFICATION_ID, buildNotification(text));
-        }
-    }
-
-    @Override
-    public void onDestroy() {
-        stopServer();
-        super.onDestroy();
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+        return "localhost";
     }
 }
