@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -65,9 +64,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ✅ Güncellenmiş listFiles metodu
     private fun listFiles() {
-        val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val fileArray = directory.listFiles()?.filter { it.exists() } ?: emptyList()
+        val directory = getExternalFilesDir(null)  // garanti erişim
+        val fileArray = directory?.listFiles()?.filter { it.exists() } ?: emptyList()
 
         if (fileArray.isEmpty()) {
             Toast.makeText(this, "Dosya bulunamadı veya erişim izni yok", Toast.LENGTH_LONG).show()
