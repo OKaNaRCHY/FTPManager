@@ -1,69 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.ftp.manager">
-
-    <!-- Depolama izinleri -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage"/>
-
-    <!-- Medya erişim izinleri (Android 13+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-
-    <!-- Ağ ve servis izinleri -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme"
-        tools:targetApi="31">
-
-        <!-- Ana Activity -->
-        <activity android:name=".MainActivity" android:exported="true">
+        android:theme="@style/Theme.FTPManager">
+        
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Diğer Activity'ler -->
-        <activity android:name=".FtpActivity" android:exported="false"/>
-        <activity android:name=".FtpServerActivity" android:exported="false"/>
-        <activity android:name=".SettingsActivity" android:exported="false"/>
-        <activity android:name=".TextEditorActivity" android:exported="false"/>
-        <activity android:name=".PdfViewerActivity" android:exported="false"/>
-
-        <!-- FTP Servisi -->
-        <service
-            android:name=".FtpServerService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"/>
-
-        <!-- WebDAV Servisi -->
-        <service
-            android:name=".webdav.WebDavService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"/>
-
-        <!-- FileProvider -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.provider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths"/>
-        </provider>
-
     </application>
+
 </manifest>
