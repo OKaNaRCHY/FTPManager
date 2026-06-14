@@ -64,9 +64,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ Güncellenmiş listFiles metodu
+    // ✅ Test dosyası eklenmiş listFiles metodu
     private fun listFiles() {
         val directory = getExternalFilesDir(null)  // garanti erişim
+
+        // 📌 Test dosyası oluştur
+        val testFile = File(directory, "deneme.txt")
+        if (!testFile.exists()) {
+            testFile.writeText("Merhaba Okan")
+        }
+
         val fileArray = directory?.listFiles()?.filter { it.exists() } ?: emptyList()
 
         if (fileArray.isEmpty()) {
