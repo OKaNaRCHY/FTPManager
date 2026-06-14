@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -28,14 +30,14 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         // 📌 Android 11+ için tam dosya erişim kontrolü
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
                 intent.data = Uri.parse("package:$packageName")
                 startActivity(intent)
                 Toast.makeText(this, "Lütfen dosya erişim izni verin", Toast.LENGTH_LONG).show()
             } else {
-                listFiles()
+                listAllMedia()
             }
         } else {
             checkPermissionAndList()
@@ -48,7 +50,7 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this,
                 arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
         } else {
-            listFiles()
+            listAllMedia()
         }
     }
 
@@ -58,41 +60,52 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1 && grantResults.isNotEmpty() &&
             grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            listFiles()
+            listAllMedia()
         } else {
             Toast.makeText(this, "Dosya erişim izni reddedildi", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // ✅ Test dosyası eklenmiş listFiles metodu
-    private fun listFiles() {
-        val directory = getExternalFilesDir(null)  // garanti erişim
+    // ✅ Tüm klasörleri MediaStore ile listeleme
+    private fun listAllMedia() {
+        val allFiles = mutableListOf<File>()
 
-        // 📌 Test dosyası oluştur
-        val testFile = File(directory, "deneme.txt")
-        if (!testFile.exists()) {
-            testFile.writeText("Merhaba Okan")
-        }
+        queryMediaStore(MediaStore.Downloads.EXTERNAL_CONTENT_URI, allFiles)
+        queryMediaStore(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, allFiles)
+        queryMediaStore(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, allFiles)
+        queryMediaStore(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, allFiles)
 
-        val fileArray = directory?.listFiles()?.filter { it.exists() } ?: emptyList()
-
-        if (fileArray.isEmpty()) {
-            Toast.makeText(this, "Dosya bulunamadı veya erişim izni yok", Toast.LENGTH_LONG).show()
+        if (allFiles.isEmpty()) {
+            Toast.makeText(this, "Hiç dosya bulunamadı", Toast.LENGTH_LONG).show()
             return
         }
 
-        files = fileArray
+        files = allFiles
         val adapter = FileAdapter(files,
             onClick = { file -> openFile(file) },
             onLongClick = { file ->
                 if (file.delete()) {
                     Toast.makeText(this, "Silindi: ${file.name}", Toast.LENGTH_SHORT).show()
-                    listFiles()
+                    listAllMedia()
                 } else {
                     Toast.makeText(this, "Silinemedi: ${file.name}", Toast.LENGTH_SHORT).show()
                 }
             })
         recyclerView.adapter = adapter
+    }
+
+    // Yardımcı fonksiyon
+    private fun queryMediaStore(uri: Uri, list: MutableList<File>) {
+        val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+        val cursor = contentResolver.query(uri, projection, null, null, null)
+        cursor?.use {
+            val nameColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+            while (it.moveToNext()) {
+                val name = it.getString(nameColumn)
+                val file = File(Environment.getExternalStorageDirectory(), name)
+                list.add(file)
+            }
+        }
     }
 
     private fun openFile(file: File) {
