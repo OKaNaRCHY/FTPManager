@@ -94,16 +94,23 @@ class MainActivity : AppCompatActivity() {
         recyclerView.adapter = adapter
     }
 
-    // Yardımcı fonksiyon
+    // 📌 Artık gerçek dosya yolunu alıyoruz
     private fun queryMediaStore(uri: Uri, list: MutableList<File>) {
-        val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+        val projection = arrayOf(
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.DATA
+        )
         val cursor = contentResolver.query(uri, projection, null, null, null)
         cursor?.use {
             val nameColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+            val dataColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
             while (it.moveToNext()) {
                 val name = it.getString(nameColumn)
-                val file = File(Environment.getExternalStorageDirectory(), name)
-                list.add(file)
+                val path = it.getString(dataColumn)
+                val file = File(path)
+                if (file.exists()) {
+                    list.add(file)
+                }
             }
         }
     }
