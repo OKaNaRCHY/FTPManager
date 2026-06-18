@@ -15,12 +15,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
-    private var files: List<File> = emptyList()
+    private var files: List<Pair<String, Uri>> = emptyList() // 📌 Dosya adı + URI
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,7 +28,6 @@ class MainActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.fileRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // 📌 Android 11+ için tam dosya erişim kontrolü
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
@@ -68,7 +66,7 @@ class MainActivity : AppCompatActivity() {
 
     // ✅ Tüm klasörleri MediaStore ile listeleme
     private fun listAllMedia() {
-        val allFiles = mutableListOf<File>()
+        val allFiles = mutableListOf<Pair<String, Uri>>()
 
         queryMediaStore(MediaStore.Downloads.EXTERNAL_CONTENT_URI, allFiles)
         queryMediaStore(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, allFiles)
@@ -81,48 +79,41 @@ class MainActivity : AppCompatActivity() {
         }
 
         files = allFiles
-        val adapter = FileAdapter(files,
-            onClick = { file -> openFile(file) },
-            onLongClick = { file ->
-                if (file.delete()) {
-                    Toast.makeText(this, "Silindi: ${file.name}", Toast.LENGTH_SHORT).show()
-                    listAllMedia()
-                } else {
-                    Toast.makeText(this, "Silinemedi: ${file.name}", Toast.LENGTH_SHORT).show()
-                }
+        val adapter = UriAdapter(files, // 📌 Yeni adapter: isim + URI
+            onClick = { name, uri -> openFile(uri) },
+            onLongClick = { name, uri ->
+                Toast.makeText(this, "Silme MediaStore URI ile desteklenmiyor", Toast.LENGTH_SHORT).show()
             })
         recyclerView.adapter = adapter
     }
 
-    // 📌 Artık gerçek dosya yolunu alıyoruz
-    private fun queryMediaStore(uri: Uri, list: MutableList<File>) {
+    // 📌 Artık URI kullanıyoruz
+    private fun queryMediaStore(uri: Uri, list: MutableList<Pair<String, Uri>>) {
         val projection = arrayOf(
             MediaStore.MediaColumns.DISPLAY_NAME,
-            MediaStore.MediaColumns.DATA
+            MediaStore.MediaColumns._ID
         )
         val cursor = contentResolver.query(uri, projection, null, null, null)
         cursor?.use {
             val nameColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
-            val dataColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
+            val idColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             while (it.moveToNext()) {
                 val name = it.getString(nameColumn)
-                val path = it.getString(dataColumn)
-                val file = File(path)
-                if (file.exists()) {
-                    list.add(file)
-                }
+                val id = it.getLong(idColumn)
+                val contentUri = Uri.withAppendedPath(uri, id.toString())
+                list.add(Pair(name, contentUri))
             }
         }
     }
 
-    private fun openFile(file: File) {
+    private fun openFile(uri: Uri) {
         val intent = Intent(Intent.ACTION_VIEW)
-        intent.setDataAndType(Uri.fromFile(file), "*/*")
+        intent.setDataAndType(uri, "*/*")
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         try {
             startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(this, "Açılamadı: ${file.name}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Açılamadı: $uri", Toast.LENGTH_SHORT).show()
         }
     }
 }
